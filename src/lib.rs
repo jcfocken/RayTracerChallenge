@@ -9,6 +9,14 @@ pub mod tuple {
     }
 
     impl Tuple {
+        pub fn new(x:f32,y:f32,z:f32,w:f32) -> Tuple {
+            Tuple{
+                x,
+                y,
+                z,
+                w,
+            }
+        }
         pub fn is_point(&self) -> bool {
             return if self.w == 1.0 {
                 true
@@ -326,9 +334,67 @@ pub mod colour {
     use std::ops;
     #[derive(Debug,Clone,PartialEq)]
     pub struct Colour {
-        red : f32,
-        green : f32,
-        blue : f32,
+        pub red : f32,
+        pub green : f32,
+        pub blue : f32,
+    }
+
+    pub const WHITE: Colour = Colour {
+        red: 1.0 ,
+        green: 1.0,
+        blue: 1.0};
+    pub const BLACK: Colour = Colour {
+        red: 0.0 ,
+        green: 0.0,
+        blue: 0.0};
+    pub const RED: Colour = Colour {
+        red: 1.0 ,
+        green: 0.0,
+        blue: 0.0};
+    pub const GREEN: Colour = Colour {
+        red: 0.0 ,
+        green: 1.0,
+        blue: 0.0};
+    pub const BLUE: Colour = Colour {
+        red: 0.0 ,
+        green: 0.0,
+        blue: 1.0};
+
+    impl Colour {
+        pub fn new(red:f32,green:f32,blue:f32) -> Colour {
+            Colour{
+                red,
+                green,
+                blue,
+            }
+        }
+        pub fn normalize(&self, max:usize) -> (usize,usize,usize) {
+            let red :usize;
+            let green :usize;
+            let blue :usize;
+            if self.red < 0.0 {
+                red = 0;
+            } else if self.red > 1.0 {
+                red = max;
+            } else {
+                red = (self.red * max as f32).round() as usize;
+            }
+            if self.green < 0.0 {
+                green = 0;
+            } else if self.green > 1.0 {
+                green = max;
+            } else {
+                green = (self.green * max as f32).round() as usize;
+            }
+            if self.blue < 0.0 {
+                blue = 0;
+            } else if self.blue > 1.0 {
+                blue = max;
+            } else {
+                blue = (self.blue * max as f32).round() as usize;
+            }
+            (red, green, blue)
+        }
     }
 
     impl ops::Add for Colour {
@@ -353,18 +419,18 @@ pub mod colour {
             }
         }
     }
-    impl ops::Mul<f32> for Colour {
-        type Output = Self;
-
-        fn mul(self, rhs: f32) -> Self::Output {
-            Self {red: self.red*rhs, green: self.green*rhs, blue: self.blue*rhs}
-        }
-    }
     impl ops::Mul for Colour {
         type Output = Self;
 
         fn mul(self, rhs: Colour) -> Self::Output {
             Self {red: self.red*rhs.red, green: self.green*rhs.green, blue: self.blue*rhs.blue}
+        }
+    }
+    impl ops::Mul<f32> for Colour {
+        type Output = Self;
+
+        fn mul(self, rhs: f32) -> Self::Output {
+            Self {red: self.red*rhs, green: self.green*rhs, blue: self.blue*rhs}
         }
     }
     impl almost::AlmostEqual for Colour {
@@ -424,4 +490,251 @@ pub mod colour {
         }
     }
 }
+pub mod canvas {
+    use crate::colour::Colour;
+    pub struct Canvas {
+        pub(crate) width  : usize,
+        pub(crate) height : usize,
+        pixels : Vec<Colour>,
+    }
 
+    impl Canvas {
+        pub(crate) fn new(width:usize, height:usize, colour:Colour) -> Canvas{
+            let vec: Vec<Colour> = vec!(colour; width*height);
+            Canvas { width, height, pixels: vec }
+        }
+        pub fn write_pixel(&mut self, width:usize, height:usize, colour:Colour) {
+            if width < self.width && height < self.height {
+                let loc = height * self.width + width;
+                self.pixels[loc] = colour;
+            } else {
+                panic!("Writing pixel outside of canvas");
+            }
+        }
+        pub fn pixel_at(&self, width:usize, height:usize) -> Colour{
+            let loc = height * self.width + width;
+            self.pixels[loc].clone()
+        }
+        pub fn to_ppm(&self) -> String{
+            let mut column = 0;
+            let mut row = 0;
+            //let mut line_length = 0;
+            //const max_length : usize = 70;
+            let mut str = format!("P3\n{} {}\n255\n",self.width,self.height);
+            for pixel in &self.pixels {
+                str.push_str(&format!("{} {} {}",
+                                      pixel.normalize(255).0,
+                                      pixel.normalize(255).1,
+                                      pixel.normalize(255).2,)
+                );
+                column += 1;
+                if column >= self.width {
+                    column = 0;
+                    row += 1;
+                    str.push_str("\n");
+                } else {
+                    str.push_str(" ");
+                }
+            }
+            str
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use crate::colour;
+        use crate::canvas;
+        #[test]
+        fn create_canvas() {
+            let a = canvas::Canvas::new(100, 50, colour::BLUE);
+            assert_eq!(a.width, 100);
+            assert_eq!(a.height, 50);
+            assert_eq!(a.pixels[0], colour::BLUE);
+            assert_eq!(a.pixels[4999], colour::BLUE);
+        }
+        #[test]
+        #[should_panic]
+        fn create_canvas_panic() {
+            let a = canvas::Canvas::new(100, 50, colour::BLUE);
+            assert_eq!(a.pixels[5000], colour::BLUE);
+        }
+        #[test]
+        fn write_pixel() {
+            let mut a = canvas::Canvas::new(100, 50, colour::BLUE);
+            a.write_pixel(5,5,colour::RED);
+            assert_eq!(a.pixel_at(5,5), colour::RED);
+            assert_eq!(a.pixel_at(5,6), colour::BLUE);
+            a.write_pixel(5,6,colour::RED);
+            assert_eq!(a.pixel_at(5,6), colour::RED);
+        }
+        #[test]
+        fn canvas_to_ppm() {
+            let a = canvas::Canvas::new(5, 3, colour::BLUE);
+            let str = a.to_ppm();
+            let mut lines = str.lines();
+            let mut line : &str;
+            match lines.next() {
+                Some(i) => line = i,
+                None => line = "",
+            }
+            assert_eq!(line, "P3");
+
+            match lines.next() {
+                Some(i) => line = i,
+                None => line = "",
+            }
+            assert_eq!(line, "5 3");
+
+            match lines.next() {
+                Some(i) => line = i,
+                None => line = "",
+            }
+            assert_eq!(line, "255");
+        }
+        #[test]
+        fn constructing_pixels() {
+            let mut a = canvas::Canvas::new(5, 3, colour::BLACK);
+            let c1 = colour::Colour::new(1.5,0.0,0.0);
+            let c2 = colour::Colour::new(0.0,0.5,0.0);
+            let c3 = colour::Colour::new(-0.5,0.0,1.0);
+            a.write_pixel(0,0, c1);
+            a.write_pixel(2,1, c2);
+            a.write_pixel(4,2, c3);
+
+            let str = a.to_ppm();
+            let mut lines = str.lines();
+            let mut line : &str;
+            for i in 1..4 {
+                lines.next();
+            }
+            match lines.next() {
+                Some(i) => line = i,
+                None => line = "",
+            }
+            assert_eq!(line, "255 0 0 0 0 0 0 0 0 0 0 0 0 0 0");
+
+            match lines.next() {
+                Some(i) => line = i,
+                None => line = "",
+            }
+            assert_eq!(line, "0 0 0 0 0 0 0 128 0 0 0 0 0 0 0");
+
+            match lines.next() {
+                Some(i) => line = i,
+                None => line = "",
+            }
+            assert_eq!(line, "0 0 0 0 0 0 0 0 0 0 0 0 0 0 255");
+        }
+        //#[test]
+        fn ppm_linebreak() {
+            let a = canvas::Canvas::new(10, 2, colour::Colour::new(1.0,0.8,0.6));
+            let str = a.to_ppm();
+            let mut lines = str.lines();
+            let mut line : &str;
+            for i in 1..4 {
+                lines.next();
+            }
+            match lines.next() {
+                Some(i) => line = i,
+                None => line = "",
+            }
+            assert_eq!(line, "255 204 153 255 204 153 255 204 153 255 204 153 255 204 153 255 204");
+
+            match lines.next() {
+                Some(i) => line = i,
+                None => line = "",
+            }
+            assert_eq!(line, "153 255 204 153 255 204 153 255 204 153 255 204 153");
+
+            match lines.next() {
+                Some(i) => line = i,
+                None => line = "",
+            }
+            assert_eq!(line, "255 204 153 255 204 153 255 204 153 255 204 153 255 204 153 255 204");
+
+            match lines.next() {
+                Some(i) => line = i,
+                None => line = "",
+            }
+            assert_eq!(line, "153 255 204 153 255 204 153 255 204 153 255 204 153");
+        }
+        #[test]
+        fn newline_at_end() {
+            let a = canvas::Canvas::new(5, 5, colour::RED);
+            let str = a.to_ppm();
+            let last = str.chars().last().unwrap();
+            assert_eq!(last, '\n');
+        }
+    }
+}
+pub mod projectile {
+    use std::fmt;
+    use crate::tuple;
+    #[derive(Debug,Clone,PartialEq)]
+    pub struct Projectile {
+        pub pos : tuple::Tuple,
+        pub vel : tuple::Tuple,
+    }
+
+    impl Projectile {
+        pub fn new(pos: tuple::Tuple,vel: tuple::Tuple) -> Projectile {
+            Projectile {
+                pos,
+                vel,
+            }
+        }
+    }
+
+    impl fmt::Display for Projectile {
+        // This trait requires `fmt` with this exact signature.
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            // Write strictly the first element into the supplied output
+            // stream: `f`. Returns `fmt::Result` which indicates whether the
+            // operation succeeded or failed. Note that `write!` uses syntax which
+            // is very similar to `println!`.
+            write!(f, "At {:.2},{:.2},{:.2} moving at {:.2},{:.2},{:.2}",
+                   self.pos.x,self.pos.y,self.pos.z,self.vel.x,self.vel.y,self.vel.z)
+        }
+    }
+}
+pub mod run {
+    pub fn run() {
+        use crate::tuple;
+        use crate::projectile;
+        use crate::canvas;
+        use crate::colour;
+        use std::fs;
+
+        let mut projectiles : Vec<projectile::Projectile> = Vec::new();
+        let mut canv = canvas::Canvas::new(100,100,colour::WHITE);
+        let mut stop : bool = false;
+        let mut step = 0;
+        let stepsize : f32 = 100.0;
+        let grav = tuple::vector(0.0,-9.81,0.0);
+        projectiles.push(projectile::Projectile::new(tuple::point(0.0,0.0,0.0),
+                                                      tuple::vector(10.0,40.0,0.0 )));
+        projectiles.push(projectile::Projectile::new(tuple::point(0.0,2.0,0.0),
+                                                      tuple::vector(15.0,30.0,0.0 )));
+        while !stop {
+            step += 1;
+            for projectile in &mut projectiles {
+                let x = projectile.pos.x as isize;
+                let y = canv.height as isize - projectile.pos.y.round() as isize;
+                if x < canv.width as isize && x >= 0 && y < canv.height as isize && y >= 0{
+                    //write pixel if in frame
+                    canv.write_pixel(x as usize, y as usize, colour::BLACK);
+                }
+                //println!("{} {}", x, y);
+                //println!("Step: {}: {}", step, projectile);
+
+                if projectile.pos.y < 0.0 {
+                    println!("end");
+                    stop = true;
+                }
+                projectile.pos = projectile.pos.clone() + projectile.vel.clone()/stepsize;
+                projectile.vel = projectile.vel.clone() + grav.clone()/stepsize;
+            }
+        }
+        fs::write("pic.ppm", canv.to_ppm());
+    }
+}
