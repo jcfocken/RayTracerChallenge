@@ -500,8 +500,8 @@ pub mod canvas {
 
     impl Canvas {
         pub(crate) fn new(width:usize, height:usize, colour:Colour) -> Canvas{
-            let vec: Vec<Colour> = vec!(colour; width*height);
-            Canvas { width, height, pixels: vec }
+            let pixel_vec: Vec<Colour> = vec!(colour; width*height);
+            Canvas { width, height, pixels: pixel_vec }
         }
         pub fn write_pixel(&mut self, width:usize, height:usize, colour:Colour) {
             if width < self.width && height < self.height {
@@ -516,6 +516,8 @@ pub mod canvas {
             self.pixels[loc].clone()
         }
         pub fn to_ppm(&self) -> String{
+            //write canvas to disk as ppm
+
             let mut column = 0;
             let mut row = 0;
             //let mut line_length = 0;
@@ -736,5 +738,10 @@ pub mod run {
             }
         }
         fs::write("pic.ppm", canv.to_ppm());
+    }
+}
+pub mod matrix {
+    pub struct Matrix {
+        
     }
 }
