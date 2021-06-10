@@ -620,27 +620,37 @@ pub mod canvas {
             self.pixels[loc]
         }
         pub fn to_ppm(&self) -> String {
-            //convert canvas to ppm
+            /*
+            convert canvas to ppm
+            */
 
+            const MAX_LENGTH : usize = 70;
             let mut column = 0;
-            //let mut row = 0;
-            //let mut line_length = 0;
-            //const max_length : usize = 70;
             let mut str = format!("P3\n{} {}\n255\n", self.width, self.height);
+            let mut new_line = String::new();
             for pixel in &self.pixels {
-                str.push_str(&format!(
-                    "{} {} {}",
-                    pixel.normalize(255).0,
-                    pixel.normalize(255).1,
-                    pixel.normalize(255).2,
-                ));
-                column += 1;
-                if column >= self.width {
-                    column = 0;
-                    //row += 1;
-                    str.push('\n');
-                } else {
-                    str.push(' ');
+                for i in 0..3 {
+                    match i {
+                        0 => new_line.push_str(&pixel.normalize(255).0.to_string()),
+                        1 => new_line.push_str(&pixel.normalize(255).1.to_string()),
+                        2 => {
+                            new_line.push_str(&pixel.normalize(255).2.to_string());
+                            column += 1;
+                        }
+                        _ => (),
+                    }
+                    if column >= self.width {
+                        column = 0;
+                        new_line.push('\n');
+                    } else if new_line.len() > ( MAX_LENGTH - 4 ) {
+                        new_line.push('\n');
+                    } else {
+                        new_line.push(' ');                                
+                    }                    
+                    if new_line.ends_with('\n') {
+                        str.push_str(&new_line);
+                        new_line = String::new();
+                    }
                 }
             }
             str
