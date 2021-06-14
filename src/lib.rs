@@ -1,6 +1,6 @@
 pub mod tuple {
     use std::ops;
-    #[derive(Debug, Clone, PartialEq)]
+    #[derive(Debug, Clone, Copy, PartialEq)]
     pub struct Tuple {
         pub x: f32,
         pub y: f32,
@@ -13,10 +13,10 @@ pub mod tuple {
             Tuple { x, y, z, w }
         }
         pub fn is_point(&self) -> bool {
-            return if self.w == 1.0 { true } else { false };
+            self.w == 1.0
         }
         pub fn is_vector(&self) -> bool {
-            return if self.w == 0.0 { true } else { false };
+            self.w == 0.0
         }
         pub fn magnitude(&self) -> f32 {
             let mut sum = 0.0;
@@ -24,7 +24,7 @@ pub mod tuple {
             sum += self.y.powi(2);
             sum += self.z.powi(2);
             sum += self.w.powi(2);
-            return sum.sqrt();
+            sum.sqrt()
         }
         pub fn normalize(&self) -> Tuple {
             let mag = self.magnitude();
@@ -381,7 +381,7 @@ pub mod tuple {
 }
 pub mod colour {
     use std::ops;
-    #[derive(Debug, Clone, PartialEq)]
+    #[derive(Debug, Clone,Copy, PartialEq)]
     pub struct Colour {
         pub red: f32,
         pub green: f32,
@@ -425,17 +425,17 @@ pub mod colour {
             match self.red {
                 x if x < 0.0 => red = 0,
                 x if x > 1.0 => red = max,
-                _ => red = (self.red * max as f32).round() as usize,
-            }
+                x => red = (x * max as f32).round() as usize,
+            }        
             match self.green {
                 x if x < 0.0 => green = 0,
                 x if x > 1.0 => green = max,
-                _ => green = (self.green * max as f32).round() as usize,
+                x => green = (x * max as f32).round() as usize,
             }
             match self.blue {
                 x if x < 0.0 => blue = 0,
                 x if x > 1.0 => blue = max,
-                _ => blue = (self.blue * max as f32).round() as usize,
+                x => blue = (x * max as f32).round() as usize,
             }
             (red, green, blue)
         }
@@ -593,14 +593,14 @@ pub mod colour {
 pub mod canvas {
     use crate::colour::Colour;
     pub struct Canvas {
-        pub(crate) width: usize,
-        pub(crate) height: usize,
+        width: usize,
+        height: usize,
         pixels: Vec<Colour>,
     }
 
     impl Canvas {
-        pub(crate) fn new(width: usize, height: usize, colour: Colour) -> Canvas {
-            let pixel_vec: Vec<Colour> = vec![colour; width * height];
+        pub fn new(width: usize, height: usize, colour: Colour) -> Canvas {
+            let pixel_vec: Vec<Colour> = vec!(colour; width * height);
             Canvas {
                 width,
                 height,
@@ -608,7 +608,7 @@ pub mod canvas {
             }
         }
         pub fn write_pixel(&mut self, width: usize, height: usize, colour: Colour) {
-            if width < self.width && height < self.height {
+            if ( width < self.width ) && ( height < self.height ) {
                 let loc = height * self.width + width;
                 self.pixels[loc] = colour;
             } else {
@@ -617,33 +617,49 @@ pub mod canvas {
         }
         pub fn pixel_at(&self, width: usize, height: usize) -> Colour {
             let loc = height * self.width + width;
-            self.pixels[loc].clone()
+            self.pixels[loc]
         }
         pub fn to_ppm(&self) -> String {
-            //write canvas to disk as ppm
+            /*
+            convert canvas to ppm
+            */
 
+            const MAX_LENGTH : usize = 70;
             let mut column = 0;
-            let mut row = 0;
-            //let mut line_length = 0;
-            //const max_length : usize = 70;
             let mut str = format!("P3\n{} {}\n255\n", self.width, self.height);
+            let mut new_line = String::new();
             for pixel in &self.pixels {
-                str.push_str(&format!(
-                    "{} {} {}",
-                    pixel.normalize(255).0,
-                    pixel.normalize(255).1,
-                    pixel.normalize(255).2,
-                ));
-                column += 1;
-                if column >= self.width {
-                    column = 0;
-                    row += 1;
-                    str.push_str("\n");
-                } else {
-                    str.push_str(" ");
+                for i in 0..3 {
+                    match i {
+                        0 => new_line.push_str(&pixel.normalize(255).0.to_string()),
+                        1 => new_line.push_str(&pixel.normalize(255).1.to_string()),
+                        2 => {
+                            new_line.push_str(&pixel.normalize(255).2.to_string());
+                            column += 1;
+                        }
+                        _ => (),
+                    }
+                    if column >= self.width {
+                        column = 0;
+                        new_line.push('\n');
+                    } else if new_line.len() > ( MAX_LENGTH - 4 ) {
+                        new_line.push('\n');
+                    } else {
+                        new_line.push(' ');                                
+                    }                    
+                    if new_line.ends_with('\n') {
+                        str.push_str(&new_line);
+                        new_line = String::new();
+                    }
                 }
             }
             str
+        }
+        pub fn get_height(&self) -> usize{
+            self.height
+        }
+        pub fn get_width(&self) -> usize{
+            self.width
         }
     }
 
@@ -711,7 +727,7 @@ pub mod canvas {
             let str = a.to_ppm();
             let mut lines = str.lines();
             let mut line: &str;
-            for i in 1..4 {
+            for _i in 1..4 {
                 lines.next();
             }
             match lines.next() {
@@ -732,13 +748,14 @@ pub mod canvas {
             }
             assert_eq!(line, "0 0 0 0 0 0 0 0 0 0 0 0 0 0 255");
         }
-        //#[test]
+        #[test]
+        //#[ignore]
         fn ppm_linebreak() {
             let a = canvas::Canvas::new(10, 2, colour::Colour::new(1.0, 0.8, 0.6));
             let str = a.to_ppm();
             let mut lines = str.lines();
             let mut line: &str;
-            for i in 1..4 {
+            for _ in 1..4 {
                 lines.next();
             }
             match lines.next() {
@@ -812,16 +829,11 @@ pub mod projectile {
 }
 pub mod run {
     pub fn run() {
-        use crate::canvas;
-        use crate::colour;
-        use crate::projectile;
-        use crate::tuple;
+        use crate::{tuple, projectile, canvas, colour};
         use std::fs;
 
         let mut projectiles: Vec<projectile::Projectile> = Vec::new();
         let mut canv = canvas::Canvas::new(100, 100, colour::WHITE);
-        let mut stop: bool = false;
-        let mut step = 0;
         let stepsize: f32 = 100.0;
         let grav = tuple::vector(0.0, -9.81, 0.0);
         projectiles.push(projectile::Projectile::new(
@@ -832,27 +844,23 @@ pub mod run {
             tuple::point(0.0, 2.0, 0.0),
             tuple::vector(15.0, 30.0, 0.0),
         ));
-        while !stop {
-            step += 1;
+        'outer: loop {
             for projectile in &mut projectiles {
                 let x = projectile.pos.x as isize;
-                let y = canv.height as isize - projectile.pos.y.round() as isize;
-                if x < canv.width as isize && x >= 0 && y < canv.height as isize && y >= 0 {
+                let y = canv.get_height() as isize - projectile.pos.y.round() as isize;
+                if (x < canv.get_width() as isize) && (x >= 0) && (y < canv.get_height() as isize) && (y >= 0) {
                     //write pixel if in frame
                     canv.write_pixel(x as usize, y as usize, colour::BLACK);
                 }
-                //println!("{} {}", x, y);
-                //println!("Step: {}: {}", step, projectile);
-
                 if projectile.pos.y < 0.0 {
                     println!("end");
-                    stop = true;
+                    break 'outer;
                 }
-                projectile.pos = projectile.pos.clone() + projectile.vel.clone() / stepsize;
-                projectile.vel = projectile.vel.clone() + grav.clone() / stepsize;
+                projectile.pos = projectile.pos + projectile.vel/stepsize;
+                projectile.vel = projectile.vel + grav/stepsize;
             }
         }
-        fs::write("pic.ppm", canv.to_ppm());
+        fs::write("pic.ppm", canv.to_ppm()).expect("Error writing image to disk");
     }
 }
 pub mod matrix {
