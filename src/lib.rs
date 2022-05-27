@@ -1,5 +1,6 @@
 pub mod tuple {
     use std::ops;
+    use almost::AlmostEqual;
     #[derive(Debug, Clone, Copy, PartialEq)]
     pub struct Tuple {
         pub x: f32,
@@ -13,10 +14,10 @@ pub mod tuple {
             Tuple { x, y, z, w }
         }
         pub fn is_point(&self) -> bool {
-            self.w == 1.0
+            self.w.almost_equals(1.0)
         }
         pub fn is_vector(&self) -> bool {
-            self.w == 0.0
+            self.w.almost_zero()
         }
         pub fn magnitude(&self) -> f32 {
             let mut sum = 0.0;
@@ -381,7 +382,7 @@ pub mod tuple {
 }
 pub mod colour {
     use std::ops;
-    #[derive(Debug, Clone,Copy, PartialEq)]
+    #[derive(Debug, Clone, Copy, PartialEq)]
     pub struct Colour {
         pub red: f32,
         pub green: f32,
@@ -426,7 +427,7 @@ pub mod colour {
                 x if x < 0.0 => red = 0,
                 x if x > 1.0 => red = max,
                 x => red = (x * max as f32).round() as usize,
-            }        
+            }
             match self.green {
                 x if x < 0.0 => green = 0,
                 x if x > 1.0 => green = max,
@@ -600,7 +601,7 @@ pub mod canvas {
 
     impl Canvas {
         pub fn new(width: usize, height: usize, colour: Colour) -> Canvas {
-            let pixel_vec: Vec<Colour> = vec!(colour; width * height);
+            let pixel_vec: Vec<Colour> = vec![colour; width * height];
             Canvas {
                 width,
                 height,
@@ -608,7 +609,7 @@ pub mod canvas {
             }
         }
         pub fn write_pixel(&mut self, width: usize, height: usize, colour: Colour) {
-            if ( width < self.width ) && ( height < self.height ) {
+            if (width < self.width) && (height < self.height) {
                 let loc = height * self.width + width;
                 self.pixels[loc] = colour;
             } else {
@@ -624,7 +625,7 @@ pub mod canvas {
             convert canvas to ppm
             */
 
-            const MAX_LENGTH : usize = 70;
+            const MAX_LENGTH: usize = 70;
             let mut column = 0;
             let mut str = format!("P3\n{} {}\n255\n", self.width, self.height);
             let mut new_line = String::new();
@@ -642,11 +643,11 @@ pub mod canvas {
                     if column >= self.width {
                         column = 0;
                         new_line.push('\n');
-                    } else if new_line.len() > ( MAX_LENGTH - 4 ) {
+                    } else if new_line.len() > (MAX_LENGTH - 4) {
                         new_line.push('\n');
                     } else {
-                        new_line.push(' ');                                
-                    }                    
+                        new_line.push(' ');
+                    }
                     if new_line.ends_with('\n') {
                         str.push_str(&new_line);
                         new_line = String::new();
@@ -655,10 +656,10 @@ pub mod canvas {
             }
             str
         }
-        pub fn get_height(&self) -> usize{
+        pub fn get_height(&self) -> usize {
             self.height
         }
-        pub fn get_width(&self) -> usize{
+        pub fn get_width(&self) -> usize {
             self.width
         }
     }
@@ -829,7 +830,7 @@ pub mod projectile {
 }
 pub mod run {
     pub fn run() {
-        use crate::{tuple, projectile, canvas, colour};
+        use crate::{canvas, colour, projectile, tuple};
         use std::fs;
 
         let mut projectiles: Vec<projectile::Projectile> = Vec::new();
@@ -843,80 +844,343 @@ pub mod run {
         projectiles.push(projectile::Projectile::new(
             tuple::point(0.0, 2.0, 0.0),
             tuple::vector(15.0, 30.0, 0.0),
-        ));
+        ));        
         'outer: loop {
             for projectile in &mut projectiles {
                 let x = projectile.pos.x as isize;
                 let y = canv.get_height() as isize - projectile.pos.y.round() as isize;
-                if (x < canv.get_width() as isize) && (x >= 0) && (y < canv.get_height() as isize) && (y >= 0) {
+                if (x < canv.get_width() as isize)
+                    && (x >= 0)
+                    && (y < canv.get_height() as isize)
+                    && (y >= 0)
+                {
                     //write pixel if in frame
                     canv.write_pixel(x as usize, y as usize, colour::BLACK);
                 }
                 if projectile.pos.y < 0.0 {
-                    println!("end");
                     break 'outer;
                 }
-                projectile.pos = projectile.pos + projectile.vel/stepsize;
-                projectile.vel = projectile.vel + grav/stepsize;
+                projectile.pos = projectile.pos + projectile.vel / stepsize;
+                projectile.vel = projectile.vel + grav / stepsize;
             }
         }
+        println!("Printing");
         fs::write("pic.ppm", canv.to_ppm()).expect("Error writing image to disk");
     }
 }
 pub mod matrix {
-    pub struct Matrix {
-        values: Vec<f32>,
-        size: usize,
+    use std::ops;
+
+    use almost::AlmostEqual;
+
+    use crate::tuple::Tuple;
+    
+    #[derive(Default, Debug, Clone, Copy)]
+    pub struct Matrix2x2 {
+        values: [f32; 4],
     }
 
-    impl Matrix {
-        pub fn new(size: usize) -> Matrix {
-            let vector: Vec<f32> = vec![0.0; 16];
-            Matrix {
-                values: vector,
-                size: size,
-            }
+    impl Matrix2x2 {
+        pub fn new() -> Matrix2x2 {
+            let vector = [0.0; 4];
+            Matrix2x2 { values: vector }
         }
-        pub fn fill(&mut self, list: Vec<f32>) {
-            if (list.len() > (self.size * self.size)) {
+        pub fn fill(&mut self, list: [f32; 4]) {
+            if list.len() > (4) {
                 panic!("Input list to long");
             }
-
             self.values = list;
+        }        
+        pub fn write_value(&mut self, x: usize, y: usize, value: f32) {
+            if x >= 2 {
+                panic!("x out of bounds");
+            }            
+            if y >= 2 {
+                panic!("y out of bounds");
+            }
+            let index = x * 2 + y;
+            self.values[index] = value;
         }
-
         pub fn value_at(&self, x: usize, y: usize) -> f32 {
+            if x >= 2 {
+                panic!("x out of bounds");
+            }            
+            if y >= 2 {
+                panic!("y out of bounds");
+            }
+            let index = x * 2 + y;
+            self.values[index]
+        }
+        pub fn determinant(&self) -> f32 {
+            self.value_at(0, 0)*self.value_at(1, 1)-self.value_at(0, 1)*self.value_at(1, 0)
+        }
+    }
+    impl almost::AlmostEqual for Matrix2x2 {
+        type Float = f32;
+        const DEFAULT_TOLERANCE: Self::Float = almost::F32_TOLERANCE;
+        const MACHINE_EPSILON: Self::Float = f32::EPSILON;
+        fn almost_equals_with(self, rhs: Self, tol: Self::Float) -> bool {
+            self.values.iter().zip(rhs.values.iter()).map(|(a, b)| a.almost_equals_with(*b, tol)).all(|x|x)
+        }
+        fn almost_zero_with(self, tol: Self::Float) -> bool {
+            self.values.iter().map(|a| a.almost_zero_with(tol)).all(|x|x)
+        }
+    }
+    
+    #[derive(Default, Debug, Clone, Copy)]
+    pub struct Matrix3x3 {
+        values: [f32; 9],
+    }
+
+    impl Matrix3x3 {
+        pub fn new() -> Matrix3x3 {
+            let vector = [0.0; 9];
+            Matrix3x3 { values: vector }
+        }   
+        pub fn fill(&mut self, list: [f32; 9]) {
+            if list.len() > (9) {
+                panic!("Input list to long");
+            }
+            self.values = list;
+        }   
+        pub fn write_value(&mut self, x: usize, y: usize, value: f32) {
+            if x >= 3 {
+                panic!("x out of bounds");
+            }            
+            if y >= 3 {
+                panic!("y out of bounds");
+            }
+            let index = x * 3 + y;
+            self.values[index] = value;
+        }
+        pub fn value_at(&self, x: usize, y: usize) -> f32 {
+            if x >= 3 {
+                panic!("x out of bounds");
+            }            
+            if y >= 3 {
+                panic!("y out of bounds");
+            }
+            let index = x * 3 + y;
+            self.values[index]
+        }
+        pub fn submatrix(&self, x: usize, y: usize) -> Matrix2x2 {
+            if x >= 3 {
+                panic!("x out of bounds");
+            }            
+            if y >= 3 {
+                panic!("y out of bounds");
+            }
+            let mut sub = Matrix2x2::new();
+            let mut i = 0;
+            for col in 0..3 {
+                if col != x {
+                    for row in 0..3 {
+                        if row != y {
+                            sub.values[i] = self.value_at(col, row);
+                            i = i+1;
+                        }
+                    }
+                }
+            }
+            sub
+        }
+        pub fn minor(&self, x: usize, y: usize) -> f32 {
+            let sub = self.submatrix(x, y);
+            sub.determinant()
+        }
+        pub fn cofactor(&self, x: usize, y: usize) -> f32 {
+            let minor = self.minor(x, y);
+            if (x + y) & 1  == 0 {
+                minor
+            } else {
+                -minor
+            }
+        }
+        pub fn determinant(&self) -> f32 {
+            let mut determinant = 0.0;
+            for x in 0..3 {
+                determinant = determinant + self.value_at(x, 0) * self.cofactor(x, 0);
+            }
+            determinant
+        }
+    }
+    impl almost::AlmostEqual for Matrix3x3 {
+        type Float = f32;
+        const DEFAULT_TOLERANCE: Self::Float = almost::F32_TOLERANCE;
+        const MACHINE_EPSILON: Self::Float = f32::EPSILON;
+        fn almost_equals_with(self, rhs: Self, tol: Self::Float) -> bool {
+            self.values.iter().zip(rhs.values.iter()).map(|(a, b)| a.almost_equals_with(*b, tol)).all(|x|x)
+        }
+        fn almost_zero_with(self, tol: Self::Float) -> bool {
+            self.values.iter().map(|a| a.almost_zero_with(tol)).all(|x|x)
+        }
+    }
+
+    #[derive(Default, Debug, Clone, Copy)]
+    pub struct Matrix4x4 {
+        values: [f32; 16],
+    }
+
+    impl Matrix4x4 {
+        pub fn new() -> Matrix4x4 {
+            let vector = [0.0; 16];
+            Matrix4x4 { values: vector }
+        }        
+        pub fn fill(&mut self, list: [f32; 16]) {
+            if list.len() > (16) {
+                panic!("Input list to long");
+            }
+            self.values = list;
+        } 
+        pub fn write_value(&mut self, x: usize, y: usize, value: f32) {
+            if x >= 4 {
+                panic!("x out of bounds");
+            }            
+            if y >= 4 {
+                panic!("y out of bounds");
+            }
             let index = x * 4 + y;
-            self.values[index].clone()
+            self.values[index] = value;
+        }
+        pub fn value_at(&self, x: usize, y: usize) -> f32 {
+            if x >= 4 {
+                panic!("x out of bounds");
+            }            
+            if y >= 4 {
+                panic!("y out of bounds");
+            }
+            let index = x * 4 + y;
+            self.values[index]
+        }
+        pub fn transpose(&self) -> Matrix4x4 {
+            let mut transposed = Matrix4x4::new();
+            for x in 0..4 {
+                for y in 0..4 {
+                    transposed.write_value(x, y, self.value_at(y, x))
+                }
+            }
+            transposed
+        }
+        pub fn submatrix(&self, x: usize, y: usize) -> Matrix3x3 {
+            if x >= 4 {
+                panic!("x out of bounds");
+            }            
+            if y >= 4 {
+                panic!("y out of bounds");
+            }
+            let mut sub = Matrix3x3::new();
+            let mut i = 0;
+            for col in 0..4 {
+                if col != x {
+                    for row in 0..4 {
+                        if row != y {
+                            sub.values[i] = self.value_at(col, row);
+                            i = i+1;
+                        }
+                    }
+                }
+            }
+            sub
+        }
+        pub fn minor(&self, x: usize, y: usize) -> f32 {
+            let sub = self.submatrix(x, y);
+            sub.determinant()
+        }
+        pub fn cofactor(&self, x: usize, y: usize) -> f32 {
+            let minor = self.minor(x, y);
+            if (x + y) & 1  == 0 {
+                minor
+            } else {
+                -minor
+            }
+        }
+        pub fn determinant(&self) -> f32 {
+            let mut determinant = 0.0;
+            for x in 0..4 {
+                determinant = determinant + self.value_at(x, 0) * self.cofactor(x, 0);
+            }
+            determinant
+        }
+        pub fn invertible(&self) -> bool {
+            self.determinant() != 0.0
+        }
+        pub fn inverse(&self) -> Matrix4x4 {
+            let det = self.determinant();
+
+            if det.almost_zero() {
+                panic!("Matrix is not invertible");
+            }
+            let mut inv = Matrix4x4::new();
+            for x in 0..4 {
+                for y in 0..4 {
+                    let c = self.cofactor(x, y);
+                    inv.write_value(y, x, c/self.determinant())
+                }
+            }
+            inv
+        }
+    }
+    impl almost::AlmostEqual for Matrix4x4 {
+        type Float = f32;
+        const DEFAULT_TOLERANCE: Self::Float = almost::F32_TOLERANCE;
+        const MACHINE_EPSILON: Self::Float = f32::EPSILON;
+        fn almost_equals_with(self, rhs: Self, tol: Self::Float) -> bool {
+            self.values.iter().zip(rhs.values.iter()).map(|(a, b)| a.almost_equals_with(*b, tol)).all(|x|x)
+        }
+        fn almost_zero_with(self, tol: Self::Float) -> bool {
+            self.values.iter().map(|a| a.almost_zero_with(tol)).all(|x|x)
+        }
+    }
+    impl ops::Mul<Matrix4x4> for Matrix4x4 {
+        type Output = Self;
+
+        fn mul(self, rhs: Matrix4x4) -> Self::Output {            
+            let mut vector = [0.0; 16];
+            for x in 0..4 {
+                for y in 0..4 {
+                    vector[x * 4 + y] = self.value_at(x, 0)*rhs.value_at(0, y) +
+                                        self.value_at(x, 1)*rhs.value_at(1, y) +
+                                        self.value_at(x, 2)*rhs.value_at(2, y) +
+                                        self.value_at(x, 3)*rhs.value_at(3, y);
+                }
+            }
+            Self {
+                values: vector
+            }
+        }
+    }
+    impl ops::Mul<Tuple> for Matrix4x4 {
+        type Output = Tuple;
+
+        fn mul(self, rhs: Tuple) -> Self::Output {            
+            let mut vector = [0.0; 4];
+            for x in 0..4 {
+                vector[x] = self.value_at(x, 0)*rhs.x +
+                            self.value_at(x, 1)*rhs.y +
+                            self.value_at(x, 2)*rhs.z +
+                            self.value_at(x, 3)*rhs.w;
+            }
+            Tuple {
+                x: vector[0],
+                y: vector[1],
+                z: vector[2],
+                w: vector[3],
+            }
         }
     }
 
     #[cfg(test)]
-    mod tests {
+    mod tests4x4 {
+        use almost::AlmostEqual;
+
         use crate::matrix;
+        use crate::tuple;
 
-        //#[test]
-        fn create_Matrix() {
-            let mut m = matrix::Matrix::new(4);
-
-            m.fill(vec![
-                1.0, 2.0, 3.0, 4.0, 5.5, 6.5, 7.5, 8.5, 9.0, 10.0, 11.0, 12.0, 13.5, 14.5, 15.5,
-                16.5,
-            ]);
-
-            assert_eq!(m.value_at(0, 0), 1.0);
-            assert_eq!(m.value_at(0, 3), 4.0);
-            assert_eq!(m.value_at(1, 0), 5.5);
-            assert_eq!(m.value_at(1, 2), 7.5);
-            assert_eq!(m.value_at(2, 2), 11.0);
-            assert_eq!(m.value_at(3, 2), 13.5);
-            assert_eq!(m.value_at(3, 2), 15.5);
-        }
         #[test]
-        fn oversize_fill() {
-            let mut m = matrix::Matrix::new(4);
+        fn create_matrix4x4() {
+            let mut m = matrix::Matrix4x4::new();
 
-            m.fill(vec![
+            m.fill([
                 1.0, 2.0, 3.0, 4.0, 5.5, 6.5, 7.5, 8.5, 9.0, 10.0, 11.0, 12.0, 13.5, 14.5, 15.5,
                 16.5,
             ]);
@@ -929,22 +1193,487 @@ pub mod matrix {
             assert_eq!(m.value_at(3, 0), 13.5);
             assert_eq!(m.value_at(3, 2), 15.5);
         }
+        #[should_panic]
         #[test]
-        fn out_of_bounds() {
-            let mut m = matrix::Matrix::new(4);
+        fn value_at_oob4x4() {
+            let mut m = matrix::Matrix4x4::new();
 
-            m.fill(vec![
+            m.fill([
                 1.0, 2.0, 3.0, 4.0, 5.5, 6.5, 7.5, 8.5, 9.0, 10.0, 11.0, 12.0, 13.5, 14.5, 15.5,
                 16.5,
             ]);
 
-            assert_eq!(m.value_at(0, 0), 1.0);
-            assert_eq!(m.value_at(0, 3), 4.0);
-            assert_eq!(m.value_at(1, 0), 5.5);
-            assert_eq!(m.value_at(1, 2), 7.5);
-            assert_eq!(m.value_at(2, 2), 11.0);
             assert_eq!(m.value_at(3, 5), 13.5);
-            assert_eq!(m.value_at(3, 2), 15.5);
+        }
+        #[should_panic]
+        #[test]
+        fn value_at_oob4x4_2() {
+            let mut m = matrix::Matrix4x4::new();
+
+            m.fill([
+                1.0, 2.0, 3.0, 4.0, 5.5, 6.5, 7.5, 8.5, 9.0, 10.0, 11.0, 12.0, 13.5, 14.5, 15.5,
+                16.5,
+            ]);
+
+            m.value_at(1, 5);
+        }
+        #[test]
+        fn almost_zero4x4() {
+            let m = matrix::Matrix4x4::new();
+
+            assert!(m.almost_zero());
+        }
+        #[should_panic]
+        #[test]
+        fn almost_zero_panic4x4() {
+            let mut m = matrix::Matrix4x4::new();
+
+            m.fill([
+                1.0, 2.0, 3.0, 4.0, 5.5, 6.5, 7.5, 8.5, 9.0, 10.0, 11.0, 12.0, 13.5, 14.5, 15.5,
+                16.5,
+            ]);
+            assert!(m.almost_zero());
+        }
+        #[test]
+        fn almost_equal4x4() {
+            let mut m = matrix::Matrix4x4::new();
+            let mut n = matrix::Matrix4x4::new();
+            
+            m.fill([
+                1.0, 2.0, 3.0, 4.0, 5.5, 6.5, 7.5, 8.5, 9.0, 10.0, 11.0, 12.0, 13.5, 14.5, 15.5,
+                16.5,
+            ]);
+            n.fill([
+                1.0, 2.0, 3.0, 4.0, 5.5, 6.5, 7.5, 8.5, 9.0, 10.0, 11.0, 12.0, 13.5, 14.5, 15.5,
+                16.5,
+            ]);
+
+            assert!(m.almost_equals(n));
+        }
+        #[should_panic]
+        #[test]
+        fn almost_equal_panic4x4() {
+            let mut m = matrix::Matrix4x4::new();
+            let mut n = matrix::Matrix4x4::new();
+            
+            
+            m.fill([
+                1.0, 2.0, 3.0, 4.0, 5.5, 6.5, 7.5, 8.5, 9.0, 10.0, 11.0, 12.0, 13.5, 14.5, 15.5,
+                16.5,
+            ]);
+            n.fill([
+                1.0, 2.0, 3.0, 4.0, 5.5, 6.5, 7.5, 8.5, 9.0, 10.0, 11.0, 12.0, 13.5, 14.5, 15.5,
+                16.51,
+            ]);
+
+            assert!(m.almost_equals(n));
+        }
+        #[test]
+        fn multiply4x4() {
+            let mut m = matrix::Matrix4x4::new();
+            let mut n = matrix::Matrix4x4::new();
+            let mut x = matrix::Matrix4x4::new();            
+            
+            m.fill([
+                1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0,
+                2.0,
+            ]);
+            n.fill([
+                -2.0, 1.0, 2.0, 3.0, 3.0, 2.0, 1.0, -1.0, 4.0, 3.0, 6.0, 5.0, 1.0, 2.0, 7.0,
+                8.0,
+            ]);
+            x.fill([
+                20.0, 22.0, 50.0, 48.0, 44.0, 54.0, 114.0, 108.0, 40.0, 58.0, 110.0, 102.0, 16.0, 26.0, 46.0,
+                42.0,
+            ]);
+            
+            assert!((m*n).almost_equals(x));
+        }
+        #[test]
+        fn multiply4x4_with_tuple() {
+            let mut m = matrix::Matrix4x4::new();
+            let n = tuple::Tuple::new(1.0, 2.0, 3.0, 1.0);
+            let x = tuple::Tuple::new(18.0, 24.0, 33.0, 1.0);            
+            
+            m.fill([
+                1.0, 2.0, 3.0, 4.0, 2.0, 4.0, 4.0, 2.0, 8.0, 6.0, 4.0, 1.0, 0.0, 0.0, 0.0,
+                1.0,
+            ]);
+            
+            assert!((m*n).almost_equals(x));
+        }
+        #[test]
+        fn multiply_by_identity() {
+            let mut m = matrix::Matrix4x4::new();  
+            let mut m2 = matrix::Matrix4x4::new();   
+            let mut i = matrix::Matrix4x4::new();        
+            
+            m.fill([
+                0.0, 1.0, 2.0, 4.0, 1.0, 2.0, 4.0, 8.0, 2.0, 4.0, 8.0, 16.0, 4.0, 8.0, 16.0,
+                32.0,
+            ]);
+            m2.fill([
+                0.0, 1.0, 2.0, 4.0, 1.0, 2.0, 4.0, 8.0, 2.0, 4.0, 8.0, 16.0, 4.0, 8.0, 16.0,
+                32.0,
+            ]);
+            i.fill([
+                1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+                1.0,
+            ]);
+            
+            assert!((m*i).almost_equals(m2));
+        }
+        #[test]
+        fn get_sub4x4() {
+            let mut m = matrix::Matrix4x4::new();
+            let mut n = matrix::Matrix3x3::new();
+            
+            m.fill([-6.0, 1.0, 1.0, 6.0,
+                          -8.0, 5.0, 8.0, 6.0,
+                          -1.0, 0.0, 8.0, 2.0,
+                          -7.0, 1.0, -1.0, 1.0]);
+            n.fill([-6.0, 1.0, 6.0,
+                          -8.0, 8.0, 6.0,
+                          -7.0, -1.0, 1.0]);
+
+            assert!(m.submatrix(2, 1).almost_equals(n));
+        }
+        #[test]
+        fn transpose4x4() {
+            let mut m = matrix::Matrix4x4::new();  
+            let mut n = matrix::Matrix4x4::new();        
+            
+            m.fill([
+                0.0, 9.0, 3.0, 0.0,
+                9.0, 8.0, 0.0, 8.0,
+                1.0, 8.0, 5.0, 3.0,
+                0.0, 0.0, 5.0, 8.0,
+            ]);
+            n.fill([
+                0.0, 9.0, 1.0, 0.0,
+                9.0, 8.0, 8.0, 0.0,
+                3.0, 0.0, 5.0, 5.0,
+                0.0, 8.0, 3.0, 8.0,
+            ]);
+            
+            assert!(m.transpose().almost_equals(n));
+        }
+        #[test]
+        fn calc_minor4x4() {
+            let mut m = matrix::Matrix4x4::new();
+            let mut n = matrix::Matrix3x3::new();
+            
+            m.fill([-6.0, 1.0, 1.0, 6.0,
+                          -8.0, 5.0, 8.0, 6.0,
+                          -1.0, 0.0, 8.0, 2.0,
+                          -7.0, 1.0, -1.0, 1.0]);
+            n.fill([-6.0, 1.0, 6.0,
+                          -8.0, 8.0, 6.0,
+                          -7.0, -1.0, 1.0]);
+
+            //assert!(m.minor(1, 0).almost_equals(25.0));
+        }
+        #[test]
+        fn determinant4x4() {
+            let mut m = matrix::Matrix4x4::new();
+            
+            m.fill([-2.0, -8.0, 3.0, 5.0,
+                          -3.0, 1.0, 7.0, 3.0,
+                          1.0, 2.0, -9.0, 6.0,
+                          -6.0, 7.0, 7.0, -9.0]);
+
+            assert!(m.cofactor(0, 0).almost_equals(690.0));
+            assert!(m.cofactor(0, 1).almost_equals(447.0));
+            assert!(m.cofactor(0, 2).almost_equals(210.0));
+            assert!(m.cofactor(0, 3).almost_equals(51.0));
+            assert!(m.determinant().almost_equals(-4071.0));
+        }
+        #[test]
+        fn invertible4x4() {
+            let mut m = matrix::Matrix4x4::new();
+            
+            m.fill([6.0, 4.0, 4.0, 4.0,
+                          5.0, 5.0, 7.0, 6.0,
+                          4.0, -9.0, 3.0, -7.0,
+                          9.0, 1.0, 7.0, -6.0]);
+
+            assert!(m.determinant().almost_equals(-2120.0));
+            assert!(m.invertible());
+        }
+        #[test]
+        fn not_invertible4x4() {
+            let mut m = matrix::Matrix4x4::new();
+            
+            m.fill([-4.0, 2.0, -2.0, -3.0,
+                          9.0, 6.0, 2.0, 6.0,
+                          0.0, -5.0, 1.0, -5.0,
+                          0.0, 0.0, 0.0, 0.0]);
+
+            assert!(m.determinant().almost_equals(-0.0));
+            assert!(!m.invertible());
+        }
+        #[test]
+        fn invert4x4() {
+            let mut m = matrix::Matrix4x4::new();
+            let mut b = matrix::Matrix4x4::new();
+            
+            m.fill([-5.0, 2.0, 6.0, -8.0,
+                          1.0, -5.0, 1.0, 8.0,
+                          7.0, 7.0, -6.0, -7.0,
+                          1.0, -3.0, 7.0, 4.0]);
+            b.fill([0.21805, 0.45113, 0.24060, -0.04511,
+                        -0.80827, -1.45677, -0.44361, 0.52068,
+                        -0.07895, -0.22368, -0.05263, 0.19737,
+                        -0.52256, -0.81391, -0.30075, 0.30639]);
+
+            let n = m.inverse();
+
+            assert!(m.determinant().almost_equals(532.0));
+            assert!(m.cofactor(2, 3).almost_equals(-160.0));
+            assert!(n.value_at(3, 2).almost_equals(-160.0/532.0));
+            assert!(m.cofactor(3, 2).almost_equals(105.0));
+            assert!(n.value_at(2, 3).almost_equals(105.0/532.0));
+            assert!(n.almost_equals(b));
+        }
+        #[test]
+        fn invert4x4_2() {
+            let mut m = matrix::Matrix4x4::new();
+            let mut b = matrix::Matrix4x4::new();
+            
+            m.fill([8.0, -5.0, 9.0, 2.0,
+                          7.0, 5.0, 6.0, 1.0,
+                          -6.0, 0.0, 9.0, 6.0,
+                          -3.0, 0.0, -9.0, -4.0]);
+            b.fill([-0.15385, -0.15385, -0.28205, -0.53846,
+                         -0.07692, 0.12308, 0.02564, 0.03077,
+                          0.35897, 0.35897, 0.43590, 0.92308,
+                         -0.69231, -0.69231, -0.76923, -1.92308]);
+
+            let n = m.inverse();
+
+            assert!(n.almost_equals(b));
+        }
+        #[test]
+        fn invert_multiply4x4() {
+            let mut a = matrix::Matrix4x4::new();
+            let mut b = matrix::Matrix4x4::new();
+            
+            a.fill([3.0, -9.0, 7.0, 3.0,
+                          3.0, -8.0, 2.0, -9.0,
+                          -4.0, 4.0, 4.0, 1.0,
+                          -6.0, 5.0, -1.0, 1.0]);
+            b.fill([8.0, -5.0, 9.0, 2.0,
+                        7.0, 5.0, 6.0, 1.0,
+                        -6.0, 0.0, 9.0, 6.0,
+                        -3.0, 0.0, -9.0, -4.0]);
+
+            let c = a*b;
+
+            assert!((c*b.inverse()).almost_equals(a));
+        }
+    }
+    
+    #[cfg(test)]
+    mod tests2x2 {
+        use almost::AlmostEqual;
+
+        use crate::matrix;
+        #[test]
+        fn create_matrix2x2() {
+            let mut m = matrix::Matrix2x2::new();
+
+            m.fill([-3.0, 5.0, 1.0, -2.0]);
+
+            assert_eq!(m.value_at(0, 0), -3.0);
+            assert_eq!(m.value_at(0, 1), 5.0);
+            assert_eq!(m.value_at(1, 0), 1.0);
+            assert_eq!(m.value_at(1, 1), -2.0);
+        }
+        #[should_panic]
+        #[test]
+        fn value_at_oob2x2() {
+            let mut m = matrix::Matrix2x2::new();
+
+            m.fill([-3.0, 5.0, 1.0, -2.0]);
+
+            assert_eq!(m.value_at(3, 5), 13.5);
+        }
+        #[should_panic]
+        #[test]
+        fn value_at_oob2x2_2() {
+            let mut m = matrix::Matrix2x2::new();
+
+            m.fill([-3.0, 5.0, 1.0, -2.0]);
+
+            m.value_at(0, 2);
+        }
+        #[test]
+        fn almost_zero2x2() {
+            let m = matrix::Matrix2x2::new();
+
+            assert!(m.almost_zero());
+        }
+        #[should_panic]
+        #[test]
+        fn almost_zero_panic2x2() {
+            let mut m = matrix::Matrix2x2::new();
+
+            m.fill([-3.0, 5.0, 1.0, -2.0]);
+
+            assert!(m.almost_zero());
+        }
+        #[test]
+        fn almost_equal2x2() {
+            let mut m = matrix::Matrix2x2::new();
+            let mut n = matrix::Matrix2x2::new();
+            
+            m.fill([-3.0, 5.0, 1.0, -2.0]);
+            n.fill([-3.0, 5.0, 1.0, -2.0]);
+
+            assert!(m.almost_equals(n));
+        }
+        #[should_panic]
+        #[test]
+        fn almost_equal_panic2x2() {
+            let mut m = matrix::Matrix2x2::new();
+            let mut n = matrix::Matrix2x2::new();
+            
+            m.fill([-3.0, 5.0, 1.0, -2.0]);
+            n.fill([-3.0, 5.0, 1.0, -2.001]);
+
+            assert!(m.almost_equals(n));
+        }
+        #[test]
+        fn find_determinant_2x2() {
+            let mut m = matrix::Matrix2x2::new();
+            
+            m.fill([1.0, 5.0, 
+                          -3.0, 2.0]);
+
+            assert_eq!(m.determinant(),17.0);
+        }
+    }
+    
+    #[cfg(test)]
+    mod tests3x3 {
+        use almost::AlmostEqual;
+
+        use crate::matrix;
+        #[test]
+        fn create_matrix3x3() {
+            let mut m = matrix::Matrix3x3::new();
+
+            m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
+
+            assert_eq!(m.value_at(0, 0), -3.0);
+            assert_eq!(m.value_at(1, 1), -2.0);
+            assert_eq!(m.value_at(2, 2), 1.0);
+        }
+        #[should_panic]
+        #[test]
+        fn value_at_oob3x3() {
+            let mut m = matrix::Matrix3x3::new();
+
+            m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
+
+            assert_eq!(m.value_at(5, 4), 13.5);
+        }
+        #[should_panic]
+        #[test]
+        fn value_at_oob3x3_2() {
+            let mut m = matrix::Matrix3x3::new();
+
+            m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
+
+            m.value_at(1, 4);
+        }
+        #[test]
+        fn almost_zero3x3() {
+            let m = matrix::Matrix3x3::new();
+
+            assert!(m.almost_zero());
+        }
+        #[should_panic]
+        #[test]
+        fn almost_zero_panic3x3() {
+            let mut m = matrix::Matrix3x3::new();
+
+            m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
+
+            assert!(m.almost_zero());
+        }
+        #[test]
+        fn almost_equal3x3() {
+            let mut m = matrix::Matrix3x3::new();
+            let mut n = matrix::Matrix3x3::new();
+            
+            m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
+            n.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
+
+            assert!(m.almost_equals(n));
+        }
+        #[should_panic]
+        #[test]
+        fn almost_equal_panic3x3() {
+            let mut m = matrix::Matrix3x3::new();
+            let mut n = matrix::Matrix3x3::new();
+            
+            m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
+            n.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.01]);
+
+            assert!(m.almost_equals(n));
+        }
+        #[test]
+        fn get_sub3x3() {
+            let mut m = matrix::Matrix3x3::new();
+            let mut n = matrix::Matrix2x2::new();
+            
+            m.fill([1.0, 5.0, 0.0,
+                          -3.0, 2.0, 7.0,
+                          0.0, 6.0, -3.0]);
+            n.fill([-3.0, 2.0,
+                          0.0, 6.0,]);
+
+            assert!(m.submatrix(0, 2).almost_equals(n));
+        }
+        #[test]
+        fn calc_minor3x3() {
+            let mut m = matrix::Matrix3x3::new();
+            let mut n = matrix::Matrix2x2::new();
+            
+            m.fill([3.0, 5.0, 0.0,
+                          2.0, -1.0, -7.0,
+                          6.0, -1.0, 5.0]);
+            n.fill([-3.0, 2.0,
+                          0.0, 6.0,]);
+
+            assert!(m.minor(1, 0).almost_equals(25.0));
+        }
+        #[test]
+        fn cofactor3x3() {
+            let mut m = matrix::Matrix3x3::new();
+            
+            m.fill([3.0, 5.0, 0.0,
+                          2.0, -1.0, -7.0,
+                          6.0, -1.0, 5.0]);
+
+            assert!(m.minor(0, 0).almost_equals(-12.0));
+            assert!(m.cofactor(0, 0).almost_equals(-12.0));
+            assert!(m.minor(1, 0).almost_equals(25.0));
+            assert!(m.cofactor(1, 0).almost_equals(-25.0));
+        }
+        #[test]
+        fn determinant3x3() {
+            let mut m = matrix::Matrix3x3::new();
+            
+            m.fill([1.0, 2.0, 6.0,
+                          -5.0, 8.0, -4.0,
+                          2.0, 6.0, 4.0]);
+
+            assert!(m.cofactor(0, 0).almost_equals(56.0));
+            assert!(m.cofactor(0, 1).almost_equals(12.0));
+            assert!(m.cofactor(0, 2).almost_equals(-46.0));
+            assert!(m.determinant().almost_equals(-196.0));
         }
     }
 }
