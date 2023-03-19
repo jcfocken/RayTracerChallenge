@@ -1,4 +1,4 @@
 use ray_tracing::run;
 fn main() {
-    run::run();
+    run::run_clock();
 }
