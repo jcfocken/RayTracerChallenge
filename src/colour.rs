@@ -1,5 +1,7 @@
 use std::ops;
 #[derive(Debug, Clone, Copy, PartialEq)]
+/// A colour struct. Allows mixing of colours using math operators and normalization.
+/// RGB values range from 0.0 to 1.0
 pub struct Colour {
     pub red: f32,
     pub green: f32,
@@ -36,25 +38,23 @@ impl Colour {
     pub fn new(red: f32, green: f32, blue: f32) -> Colour {
         Colour { red, green, blue }
     }
+    /// Return RGB values as a tuple normalized from 0 to max
     pub fn normalize(&self, max: usize) -> (usize, usize, usize) {
-        let red: usize;
-        let green: usize;
-        let blue: usize;
-        match self.red {
-            x if x < 0.0 => red = 0,
-            x if x > 1.0 => red = max,
-            x => red = (x * max as f32).round() as usize,
-        }
-        match self.green {
-            x if x < 0.0 => green = 0,
-            x if x > 1.0 => green = max,
-            x => green = (x * max as f32).round() as usize,
-        }
-        match self.blue {
-            x if x < 0.0 => blue = 0,
-            x if x > 1.0 => blue = max,
-            x => blue = (x * max as f32).round() as usize,
-        }
+        let red: usize = match self.red {
+                            x if x < 0.0 =>  0,
+                            x if x > 1.0 =>  max,
+                            x => (x * max as f32).round() as usize,
+        };
+        let green: usize = match self.green {
+                            x if x < 0.0 => 0,
+                            x if x > 1.0 => max,
+                            x => (x * max as f32).round() as usize,
+        };
+        let blue: usize = match self.blue {
+                            x if x < 0.0 => 0,
+                            x if x > 1.0 => max,
+                            x => (x * max as f32).round() as usize,
+        };     
         (red, green, blue)
     }
 }

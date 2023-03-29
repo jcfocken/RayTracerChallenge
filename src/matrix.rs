@@ -6,7 +6,6 @@ use crate::tuple::Tuple;
 pub struct Matrix2x2 {
     values: [f32; 4],
 }
-
 impl Matrix2x2 {
     pub fn new() -> Matrix2x2 {
         let vector = [0.0; 4];
@@ -63,7 +62,6 @@ impl fmt::Display for Matrix2x2 {
 pub struct Matrix3x3 {
     values: [f32; 9],
 }
-
 impl Matrix3x3 {
     pub fn new() -> Matrix3x3 {
         let vector = [0.0; 9];
@@ -109,7 +107,7 @@ impl Matrix3x3 {
                 for col in 0..3 {
                     if col != n {
                         sub.values[i] = self.value_at(row, col);
-                        i = i+1;
+                        i += 1;
                     }
                 }
             }
@@ -131,7 +129,7 @@ impl Matrix3x3 {
     pub fn determinant(&self) -> f32 {
         let mut determinant = 0.0;
         for m in 0..3 {
-            determinant = determinant + self.value_at(m, 0) * self.cofactor(m, 0);
+            determinant += self.value_at(m, 0) * self.cofactor(m, 0);
         }
         determinant
     }
@@ -215,7 +213,7 @@ impl Matrix4x4 {
                 for col in 0..4 {
                     if col != n {
                         sub.values[i] = self.value_at(row, col);
-                        i = i+1;
+                        i += 1;
                     }
                 }
             }
@@ -237,7 +235,7 @@ impl Matrix4x4 {
     pub fn determinant(&self) -> f32 {
         let mut determinant = 0.0;
         for m in 0..4 {
-            determinant = determinant + self.value_at(m, 0) * self.cofactor(m, 0);
+            determinant += self.value_at(m, 0) * self.cofactor(m, 0);
         }
         determinant
     }
@@ -294,8 +292,8 @@ impl ops::Mul<Tuple> for Matrix4x4 {
 
     fn mul(self, rhs: Tuple) -> Self::Output {            
         let mut vector = [0.0; 4];
-        for x in 0..4 {
-            vector[x] = self.value_at(x, 0)*rhs.x +
+        for (x, element) in vector.iter_mut().enumerate() {
+            *element =  self.value_at(x, 0)*rhs.x +
                         self.value_at(x, 1)*rhs.y +
                         self.value_at(x, 2)*rhs.z +
                         self.value_at(x, 3)*rhs.w;
@@ -324,6 +322,221 @@ pub fn identity() -> Matrix4x4 {
     ident.write_value(2, 2, 1.0);
     ident.write_value(3, 3, 1.0);
     ident
+}
+
+#[cfg(test)]
+mod tests2x2 {
+    use almost::AlmostEqual;
+
+    use crate::matrix;
+    #[test]
+    fn create_matrix2x2() {
+        let mut m = matrix::Matrix2x2::new();
+
+        m.fill([-3.0, 5.0, 1.0, -2.0]);
+
+        assert_eq!(m.value_at(0, 0), -3.0);
+        assert_eq!(m.value_at(0, 1), 5.0);
+        assert_eq!(m.value_at(1, 0), 1.0);
+        assert_eq!(m.value_at(1, 1), -2.0);
+    }
+    #[should_panic]
+    #[test]
+    fn value_at_oob2x2() {
+        let mut m = matrix::Matrix2x2::new();
+
+        m.fill([-3.0, 5.0, 1.0, -2.0]);
+
+        assert_eq!(m.value_at(3, 5), 13.5);
+    }
+    #[should_panic]
+    #[test]
+    fn value_at_oob2x2_2() {
+        let mut m = matrix::Matrix2x2::new();
+
+        m.fill([-3.0, 5.0, 1.0, -2.0]);
+
+        m.value_at(0, 2);
+    }
+    #[test]
+    fn almost_zero2x2() {
+        let m = matrix::Matrix2x2::new();
+
+        assert!(m.almost_zero());
+    }
+    #[should_panic]
+    #[test]
+    fn almost_zero_panic2x2() {
+        let mut m = matrix::Matrix2x2::new();
+
+        m.fill([-3.0, 5.0, 1.0, -2.0]);
+
+        assert!(m.almost_zero());
+    }
+    #[test]
+    fn almost_equal2x2() {
+        let mut m = matrix::Matrix2x2::new();
+        let mut n = matrix::Matrix2x2::new();
+        
+        m.fill([-3.0, 5.0, 1.0, -2.0]);
+        n.fill([-3.0, 5.0, 1.0, -2.0]);
+
+        assert!(m.almost_equals(n));
+    }
+    #[should_panic]
+    #[test]
+    fn almost_equal_panic2x2() {
+        let mut m = matrix::Matrix2x2::new();
+        let mut n = matrix::Matrix2x2::new();
+        
+        m.fill([-3.0, 5.0, 1.0, -2.0]);
+        n.fill([-3.0, 5.0, 1.0, -2.001]);
+
+        assert!(m.almost_equals(n));
+    }
+    #[test]
+    fn find_determinant_2x2() {
+        let mut m = matrix::Matrix2x2::new();
+        
+        m.fill([1.0, 5.0, 
+                      -3.0, 2.0]);
+
+        assert_eq!(m.determinant(),17.0);
+    }
+}
+
+#[cfg(test)]
+mod tests3x3 {
+    use almost::AlmostEqual;
+
+    use super::{Matrix3x3,Matrix2x2};
+    #[test]
+    fn create_matrix3x3() {
+        let mut m = Matrix3x3::new();
+
+        m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
+
+        assert_eq!(m.value_at(0, 0), -3.0);
+        assert_eq!(m.value_at(1, 1), -2.0);
+        assert_eq!(m.value_at(2, 2), 1.0);
+    }    
+    #[test]
+    fn value_at_3x3() {
+        let mut m = Matrix3x3::new();
+
+        m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
+
+        assert_eq!(m.value_at(1, 1), -2.0);
+        assert_eq!(m.value_at(0, 1),  5.0);
+        assert_eq!(m.value_at(0, 0), -3.0);
+    }
+    #[should_panic]
+    #[test]
+    fn value_at_oob3x3_() {
+        let mut m = Matrix3x3::new();
+
+        m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
+
+        assert_eq!(m.value_at(5, 4), 13.5);
+    }
+    #[should_panic]
+    #[test]
+    fn value_at_oob3x3_2() {
+        let mut m = Matrix3x3::new();
+
+        m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
+
+        m.value_at(1, 4);
+    }
+    #[test]
+    fn almost_zero3x3() {
+        let m = Matrix3x3::new();
+
+        assert!(m.almost_zero());
+    }
+    #[should_panic]
+    #[test]
+    fn almost_zero_panic3x3() {
+        let mut m = Matrix3x3::new();
+
+        m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
+
+        assert!(m.almost_zero());
+    }
+    #[test]
+    fn almost_equal3x3() {
+        let mut m = Matrix3x3::new();
+        let mut n = Matrix3x3::new();
+        
+        m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
+        n.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
+
+        assert!(m.almost_equals(n));
+    }
+    #[should_panic]
+    #[test]
+    fn almost_equal_panic3x3() {
+        let mut m = Matrix3x3::new();
+        let mut n = Matrix3x3::new();
+        
+        m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
+        n.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.01]);
+
+        assert!(m.almost_equals(n));
+    }
+    #[test]
+    fn get_sub3x3() {
+        let mut m = Matrix3x3::new();
+        let mut n = Matrix2x2::new();
+        
+        m.fill([1.0, 5.0, 0.0,
+                      -3.0, 2.0, 7.0,
+                      0.0, 6.0, -3.0]);
+        n.fill([-3.0, 2.0,
+                      0.0, 6.0,]);
+        print!("{}",m);
+
+        assert!(m.submatrix(0, 2).almost_equals(n));
+    }
+    #[test]
+    fn calc_minor3x3() {
+        let mut m = Matrix3x3::new();
+        let mut n = Matrix2x2::new();
+        
+        m.fill([3.0, 5.0, 0.0,
+                      2.0, -1.0, -7.0,
+                      6.0, -1.0, 5.0]);
+        n.fill([-3.0, 2.0,
+                      0.0, 6.0,]);
+
+        assert!(m.minor(1, 0).almost_equals(25.0));
+    }
+    #[test]
+    fn cofactor3x3() {
+        let mut m = Matrix3x3::new();
+        
+        m.fill([3.0, 5.0, 0.0,
+                      2.0, -1.0, -7.0,
+                      6.0, -1.0, 5.0]);
+
+        assert!(m.minor(0, 0).almost_equals(-12.0));
+        assert!(m.cofactor(0, 0).almost_equals(-12.0));
+        assert!(m.minor(1, 0).almost_equals(25.0));
+        assert!(m.cofactor(1, 0).almost_equals(-25.0));
+    }
+    #[test]
+    fn determinant3x3() {
+        let mut m = Matrix3x3::new();
+        
+        m.fill([1.0, 2.0, 6.0,
+                      -5.0, 8.0, -4.0,
+                      2.0, 6.0, 4.0]);
+
+        assert!(m.cofactor(0, 0).almost_equals(56.0));
+        assert!(m.cofactor(0, 1).almost_equals(12.0));
+        assert!(m.cofactor(0, 2).almost_equals(-46.0));
+        assert!(m.determinant().almost_equals(-196.0));
+    }
 }
 
 #[cfg(test)]
@@ -627,220 +840,5 @@ mod tests4x4 {
         let c = a*b;
 
         assert!((c*b.inverse()).almost_equals(a));
-    }
-}
-
-#[cfg(test)]
-mod tests2x2 {
-    use almost::AlmostEqual;
-
-    use crate::matrix;
-    #[test]
-    fn create_matrix2x2() {
-        let mut m = matrix::Matrix2x2::new();
-
-        m.fill([-3.0, 5.0, 1.0, -2.0]);
-
-        assert_eq!(m.value_at(0, 0), -3.0);
-        assert_eq!(m.value_at(0, 1), 5.0);
-        assert_eq!(m.value_at(1, 0), 1.0);
-        assert_eq!(m.value_at(1, 1), -2.0);
-    }
-    #[should_panic]
-    #[test]
-    fn value_at_oob2x2() {
-        let mut m = matrix::Matrix2x2::new();
-
-        m.fill([-3.0, 5.0, 1.0, -2.0]);
-
-        assert_eq!(m.value_at(3, 5), 13.5);
-    }
-    #[should_panic]
-    #[test]
-    fn value_at_oob2x2_2() {
-        let mut m = matrix::Matrix2x2::new();
-
-        m.fill([-3.0, 5.0, 1.0, -2.0]);
-
-        m.value_at(0, 2);
-    }
-    #[test]
-    fn almost_zero2x2() {
-        let m = matrix::Matrix2x2::new();
-
-        assert!(m.almost_zero());
-    }
-    #[should_panic]
-    #[test]
-    fn almost_zero_panic2x2() {
-        let mut m = matrix::Matrix2x2::new();
-
-        m.fill([-3.0, 5.0, 1.0, -2.0]);
-
-        assert!(m.almost_zero());
-    }
-    #[test]
-    fn almost_equal2x2() {
-        let mut m = matrix::Matrix2x2::new();
-        let mut n = matrix::Matrix2x2::new();
-        
-        m.fill([-3.0, 5.0, 1.0, -2.0]);
-        n.fill([-3.0, 5.0, 1.0, -2.0]);
-
-        assert!(m.almost_equals(n));
-    }
-    #[should_panic]
-    #[test]
-    fn almost_equal_panic2x2() {
-        let mut m = matrix::Matrix2x2::new();
-        let mut n = matrix::Matrix2x2::new();
-        
-        m.fill([-3.0, 5.0, 1.0, -2.0]);
-        n.fill([-3.0, 5.0, 1.0, -2.001]);
-
-        assert!(m.almost_equals(n));
-    }
-    #[test]
-    fn find_determinant_2x2() {
-        let mut m = matrix::Matrix2x2::new();
-        
-        m.fill([1.0, 5.0, 
-                      -3.0, 2.0]);
-
-        assert_eq!(m.determinant(),17.0);
-    }
-}
-
-#[cfg(test)]
-mod tests3x3 {
-    use almost::AlmostEqual;
-
-    use crate::matrix;
-    #[test]
-    fn create_matrix3x3() {
-        let mut m = matrix::Matrix3x3::new();
-
-        m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
-
-        assert_eq!(m.value_at(0, 0), -3.0);
-        assert_eq!(m.value_at(1, 1), -2.0);
-        assert_eq!(m.value_at(2, 2), 1.0);
-    }    
-    #[test]
-    fn value_at_3x3() {
-        let mut m = matrix::Matrix3x3::new();
-
-        m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
-
-        assert_eq!(m.value_at(1, 1), -2.0);
-        assert_eq!(m.value_at(0, 1),  5.0);
-        assert_eq!(m.value_at(0, 0), -3.0);
-    }
-    #[should_panic]
-    #[test]
-    fn value_at_oob3x3_() {
-        let mut m = matrix::Matrix3x3::new();
-
-        m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
-
-        assert_eq!(m.value_at(5, 4), 13.5);
-    }
-    #[should_panic]
-    #[test]
-    fn value_at_oob3x3_2() {
-        let mut m = matrix::Matrix3x3::new();
-
-        m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
-
-        m.value_at(1, 4);
-    }
-    #[test]
-    fn almost_zero3x3() {
-        let m = matrix::Matrix3x3::new();
-
-        assert!(m.almost_zero());
-    }
-    #[should_panic]
-    #[test]
-    fn almost_zero_panic3x3() {
-        let mut m = matrix::Matrix3x3::new();
-
-        m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
-
-        assert!(m.almost_zero());
-    }
-    #[test]
-    fn almost_equal3x3() {
-        let mut m = matrix::Matrix3x3::new();
-        let mut n = matrix::Matrix3x3::new();
-        
-        m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
-        n.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
-
-        assert!(m.almost_equals(n));
-    }
-    #[should_panic]
-    #[test]
-    fn almost_equal_panic3x3() {
-        let mut m = matrix::Matrix3x3::new();
-        let mut n = matrix::Matrix3x3::new();
-        
-        m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
-        n.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.01]);
-
-        assert!(m.almost_equals(n));
-    }
-    #[test]
-    fn get_sub3x3() {
-        let mut m = matrix::Matrix3x3::new();
-        let mut n = matrix::Matrix2x2::new();
-        
-        m.fill([1.0, 5.0, 0.0,
-                      -3.0, 2.0, 7.0,
-                      0.0, 6.0, -3.0]);
-        n.fill([-3.0, 2.0,
-                      0.0, 6.0,]);
-        print!("{}",m);
-
-        assert!(m.submatrix(0, 2).almost_equals(n));
-    }
-    #[test]
-    fn calc_minor3x3() {
-        let mut m = matrix::Matrix3x3::new();
-        let mut n = matrix::Matrix2x2::new();
-        
-        m.fill([3.0, 5.0, 0.0,
-                      2.0, -1.0, -7.0,
-                      6.0, -1.0, 5.0]);
-        n.fill([-3.0, 2.0,
-                      0.0, 6.0,]);
-
-        assert!(m.minor(1, 0).almost_equals(25.0));
-    }
-    #[test]
-    fn cofactor3x3() {
-        let mut m = matrix::Matrix3x3::new();
-        
-        m.fill([3.0, 5.0, 0.0,
-                      2.0, -1.0, -7.0,
-                      6.0, -1.0, 5.0]);
-
-        assert!(m.minor(0, 0).almost_equals(-12.0));
-        assert!(m.cofactor(0, 0).almost_equals(-12.0));
-        assert!(m.minor(1, 0).almost_equals(25.0));
-        assert!(m.cofactor(1, 0).almost_equals(-25.0));
-    }
-    #[test]
-    fn determinant3x3() {
-        let mut m = matrix::Matrix3x3::new();
-        
-        m.fill([1.0, 2.0, 6.0,
-                      -5.0, 8.0, -4.0,
-                      2.0, 6.0, 4.0]);
-
-        assert!(m.cofactor(0, 0).almost_equals(56.0));
-        assert!(m.cofactor(0, 1).almost_equals(12.0));
-        assert!(m.cofactor(0, 2).almost_equals(-46.0));
-        assert!(m.determinant().almost_equals(-196.0));
     }
 }

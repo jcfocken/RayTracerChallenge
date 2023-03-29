@@ -1,11 +1,13 @@
 use crate::colour::Colour;
+
+/// A struct representing canvas. It can create a string containing a representation of itself in ppm format. 
 pub struct Canvas {
     width: usize,
     height: usize,
     pixels: Vec<Colour>,
 }
-
 impl Canvas {
+    /// Create a new blank canvas
     pub fn new(width: usize, height: usize, colour: Colour) -> Canvas {
         let pixel_vec: Vec<Colour> = vec![colour; width * height];
         Canvas {
@@ -14,6 +16,7 @@ impl Canvas {
             pixels: pixel_vec,
         }
     }
+    /// Set the colour at location (width, height) to colour
     pub fn write_pixel(&mut self, width: usize, height: usize, colour: Colour) {
         if (width < self.width) && (height < self.height) {
             let loc = height * self.width + width;
@@ -22,15 +25,13 @@ impl Canvas {
             panic!("Writing pixel outside of canvas");
         }
     }
+    /// Return the pixel colour at a location (width, height)
     pub fn pixel_at(&self, width: usize, height: usize) -> Colour {
         let loc = height * self.width + width;
         self.pixels[loc]
     }
+    ///  Return canvas as a string containing a representation in ppm format
     pub fn to_ppm(&self) -> String {
-        /*
-            convert canvas to ppm
-            */
-
         const MAX_LENGTH: usize = 70;
         let mut column = 0;
         let mut str = format!("P3\n{} {}\n255\n", self.width, self.height);
@@ -62,9 +63,11 @@ impl Canvas {
         }
         str
     }
+    /// Return the height of the canvas
     pub fn get_height(&self) -> usize {
         self.height
     }
+    /// Return the width of the canvas
     pub fn get_width(&self) -> usize {
         self.width
     }
