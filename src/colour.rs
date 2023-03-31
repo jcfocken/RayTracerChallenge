@@ -58,7 +58,7 @@ impl Colour {
         (red, green, blue)
     }
 }
-
+/// Add two colours together
 impl ops::Add for Colour {
     type Output = Self;
 
@@ -70,6 +70,7 @@ impl ops::Add for Colour {
         }
     }
 }
+/// Subtract the individual RGB channels of the second operand from the corresponding channel of the first operand
 impl ops::Sub for Colour {
     type Output = Self;
 
@@ -81,6 +82,7 @@ impl ops::Sub for Colour {
         }
     }
 }
+/// Multiply the individual RGB channels by the corresponding channel from the other colour
 impl ops::Mul for Colour {
     type Output = Self;
 
@@ -92,6 +94,7 @@ impl ops::Mul for Colour {
         }
     }
 }
+/// Multiply the individual RGB channels by a scalar
 impl ops::Mul<f32> for Colour {
     type Output = Self;
 
@@ -103,27 +106,39 @@ impl ops::Mul<f32> for Colour {
         }
     }
 }
-impl almost::AlmostEqual for Colour {
-    type Float = f32;
-    const DEFAULT_TOLERANCE: Self::Float = almost::F32_TOLERANCE;
-    const MACHINE_EPSILON: Self::Float = f32::EPSILON;
-    fn almost_equals_with(self, rhs: Self, tol: Self::Float) -> bool {
-        almost::equal_with(self.red, rhs.red, tol)
-            && almost::equal_with(self.green, rhs.green, tol)
-            && almost::equal_with(self.blue, rhs.blue, tol)
+impl approx::AbsDiffEq for Colour {
+    type Epsilon = f32;
+    fn default_epsilon() -> Self::Epsilon {
+        f32::default_epsilon()
+    }
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        f32::abs_diff_eq(&self.red, &other.red, epsilon) &&
+        f32::abs_diff_eq(&self.green, &other.green, epsilon) &&
+        f32::abs_diff_eq(&self.blue, &other.blue, epsilon)
     }
 
-    fn almost_zero_with(self, tol: Self::Float) -> bool {
-        almost::zero_with(self.red, tol)
-            && almost::zero_with(self.green, tol)
-            && almost::zero_with(self.blue, tol)
+    fn abs_diff_ne(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        !Self::abs_diff_eq(self, other, epsilon)
+    }
+}
+impl approx::RelativeEq for Colour{
+    fn default_max_relative() -> Self::Epsilon {
+        f32::default_max_relative()
+    }
+
+    fn relative_eq(&self, other: &Self, epsilon: Self::Epsilon, max_relative: Self::Epsilon)
+            -> bool {
+        f32::relative_eq(&self.red, &other.red, epsilon, max_relative) &&
+        f32::relative_eq(&self.green, &other.green, epsilon, max_relative) &&
+        f32::relative_eq(&self.blue, &other.blue, epsilon, max_relative)        
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use approx::assert_relative_eq;
+
     use crate::colour::Colour;
-    use almost;
     #[test]
     fn is_tuple() {
         let a = Colour {
@@ -152,7 +167,7 @@ mod tests {
             green: 0.7,
             blue: 1.0,
         };
-        assert!(almost::equal(c1 + c2, c3));
+        assert_relative_eq!(c1+c2, c3)
     }
     #[test]
     fn subtract_colour() {
@@ -171,7 +186,7 @@ mod tests {
             green: 0.5,
             blue: 0.5,
         };
-        assert!(almost::equal(c1 - c2, c3));
+        assert_relative_eq!(c1-c2, c3)
     }
     #[test]
     fn scale_colour() {
@@ -185,7 +200,7 @@ mod tests {
             green: 0.6,
             blue: 0.8,
         };
-        assert!(almost::equal(c1 * 2.0, c2));
+        assert_relative_eq!(c1*2.0, c2)
     }
     #[test]
     fn mix_colour() {
@@ -204,6 +219,6 @@ mod tests {
             green: 0.2,
             blue: 0.04,
         };
-        assert!(almost::equal(c1 * c2, c3));
+        assert_relative_eq!(c1*c2, c3)
     }
 }

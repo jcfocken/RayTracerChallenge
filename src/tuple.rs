@@ -1,5 +1,4 @@
 use std::{ops, fmt};
-use almost::AlmostEqual;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Tuple {
     pub x: f32,
@@ -13,10 +12,10 @@ impl Tuple {
         Tuple { x, y, z, w }
     }
     pub fn is_point(&self) -> bool {
-        self.w.almost_equals(1.0)
+        self.w == 1.0
     }
     pub fn is_vector(&self) -> bool {
-        self.w.almost_zero()
+        self.w == 0.0
     }
     pub fn magnitude(&self) -> f32 {
         let mut sum = 0.0;
@@ -114,22 +113,33 @@ impl ops::Div<f32> for Tuple {
         }
     }
 }
-impl almost::AlmostEqual for Tuple {
-    type Float = f32;
-    const DEFAULT_TOLERANCE: Self::Float = almost::F32_TOLERANCE;
-    const MACHINE_EPSILON: Self::Float = f32::EPSILON;
-    fn almost_equals_with(self, rhs: Self, tol: Self::Float) -> bool {
-        almost::equal_with(self.x, rhs.x, tol)
-            && almost::equal_with(self.y, rhs.y, tol)
-            && almost::equal_with(self.z, rhs.z, tol)
-            && almost::equal_with(self.w, rhs.w, tol)
+impl approx::AbsDiffEq for Tuple {
+    type Epsilon = f32;
+    fn default_epsilon() -> Self::Epsilon {
+        f32::default_epsilon()
+    }
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        f32::abs_diff_eq(&self.x, &other.x, epsilon) &&
+        f32::abs_diff_eq(&self.y, &other.y, epsilon) &&
+        f32::abs_diff_eq(&self.z, &other.z, epsilon) &&
+        f32::abs_diff_eq(&self.w, &other.w, epsilon)
     }
 
-    fn almost_zero_with(self, tol: Self::Float) -> bool {
-        almost::zero_with(self.x, tol)
-            && almost::zero_with(self.y, tol)
-            && almost::zero_with(self.z, tol)
-            && almost::zero_with(self.w, tol)
+    fn abs_diff_ne(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        !Self::abs_diff_eq(self, other, epsilon)
+    }
+}
+impl approx::RelativeEq for Tuple{
+    fn default_max_relative() -> Self::Epsilon {
+        f32::default_max_relative()
+    }
+
+    fn relative_eq(&self, other: &Self, epsilon: Self::Epsilon, max_relative: Self::Epsilon)
+            -> bool {
+        f32::relative_eq(&self.x, &other.x, epsilon, max_relative) &&
+        f32::relative_eq(&self.y, &other.y, epsilon, max_relative) &&
+        f32::relative_eq(&self.z, &other.z, epsilon, max_relative) &&
+        f32::relative_eq(&self.w, &other.w, epsilon, max_relative)        
     }
 }
 impl fmt::Display for Tuple {
@@ -147,6 +157,8 @@ pub fn vector(x: f32, y: f32, z: f32) -> Tuple {
 
 #[cfg(test)]
 mod tests {
+    use approx::{relative_eq, assert_relative_eq};
+
     use crate::tuple::{point, vector, Tuple};
     #[test]
     fn is_point() {
@@ -275,7 +287,6 @@ mod tests {
             z: 10.5,
             w: -14.0,
         };
-
         assert_eq! {b,c};
     }
     #[test]
@@ -288,13 +299,12 @@ mod tests {
         };
         let b = a * 0.5;
         let c = Tuple {
-            x: 0.5,
+            x: 0.5000001,
             y: -1.0,
             z: 1.5,
             w: -2.0,
         };
-
-        assert_eq! {b,c};
+        assert_relative_eq!(b,c);
     }
     #[test]
     fn div_by_scalar() {
@@ -311,7 +321,6 @@ mod tests {
             z: 1.5,
             w: -2.0,
         };
-
         assert_eq! {b,c};
     }
     #[test]
@@ -357,15 +366,15 @@ mod tests {
     fn normalize2() {
         let a: Tuple = vector(1.0, 2.0, 3.0);
         let b: Tuple = a.normalize();
-        let c: Tuple = vector(0.267261, 0.5345225, 0.8017837);
-        assert! {almost::equal(b, c)};
+        let c: Tuple = vector(0.26726, 0.53452, 0.80178);
+        assert!(relative_eq!(b,c, epsilon = 0.00001))
     }
     #[test]
     fn normalize3() {
         let a: Tuple = vector(1.0, 2.0, 3.0);
         let b: Tuple = a.normalize();
         let mag = b.magnitude();
-        assert! {almost::equal(mag , 1.0)};
+        assert_relative_eq!(mag, 1.0);
     }
     #[test]
     fn dot() {

@@ -56,3 +56,4 @@ pub mod run {
         fs::write("clock.ppm", canv.to_ppm()).expect("Error writing image to disk");
     }
 }
+const DEFAULT_EPSILON: f32 = 0.00001; //TODO does this belong here?

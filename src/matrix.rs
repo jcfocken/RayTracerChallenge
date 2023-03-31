@@ -1,8 +1,8 @@
 use std::{ops, fmt};
-use almost::AlmostEqual;
-use crate::tuple::Tuple;
 
-#[derive(Default, Debug, Clone, Copy)]
+use crate::{tuple::Tuple};
+
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct Matrix2x2 {
     values: [f32; 4],
 }
@@ -41,15 +41,26 @@ impl Matrix2x2 {
         self.value_at(0, 0)*self.value_at(1, 1)-self.value_at(0, 1)*self.value_at(1, 0)
     }
 }
-impl almost::AlmostEqual for Matrix2x2 {
-    type Float = f32;
-    const DEFAULT_TOLERANCE: Self::Float = almost::F32_TOLERANCE;
-    const MACHINE_EPSILON: Self::Float = f32::EPSILON;
-    fn almost_equals_with(self, rhs: Self, tol: Self::Float) -> bool {
-        self.values.iter().zip(rhs.values.iter()).map(|(a, b)| a.almost_equals_with(*b, tol)).all(|x|x)
+impl approx::AbsDiffEq for Matrix2x2 {
+    type Epsilon = f32;
+    fn default_epsilon() -> Self::Epsilon {
+        f32::default_epsilon()
     }
-    fn almost_zero_with(self, tol: Self::Float) -> bool {
-        self.values.iter().map(|a| a.almost_zero_with(tol)).all(|x|x)
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        self.values.iter().zip(other.values.iter()).map(|(a, b)| a.abs_diff_eq(b, epsilon)).all(|x|x)
+    }
+    fn abs_diff_ne(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        !Self::abs_diff_eq(self, other, epsilon)
+    }
+}
+impl approx::RelativeEq for Matrix2x2{
+    fn default_max_relative() -> Self::Epsilon {
+        f32::default_max_relative()
+    }
+
+    fn relative_eq(&self, other: &Self, epsilon: Self::Epsilon, max_relative: Self::Epsilon)
+            -> bool {
+        self.values.iter().zip(other.values.iter()).map(|(a, b)| a.relative_eq(b, epsilon, max_relative)).all(|x|x)       
     }
 }
 impl fmt::Display for Matrix2x2 {
@@ -58,7 +69,7 @@ impl fmt::Display for Matrix2x2 {
     }   
 }
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct Matrix3x3 {
     values: [f32; 9],
 }
@@ -134,15 +145,26 @@ impl Matrix3x3 {
         determinant
     }
 }
-impl almost::AlmostEqual for Matrix3x3 {
-    type Float = f32;
-    const DEFAULT_TOLERANCE: Self::Float = almost::F32_TOLERANCE;
-    const MACHINE_EPSILON: Self::Float = f32::EPSILON;
-    fn almost_equals_with(self, rhs: Self, tol: Self::Float) -> bool {
-        self.values.iter().zip(rhs.values.iter()).map(|(a, b)| a.almost_equals_with(*b, tol)).all(|x|x)
+impl approx::AbsDiffEq for Matrix3x3 {
+    type Epsilon = f32;
+    fn default_epsilon() -> Self::Epsilon {
+        f32::default_epsilon()
     }
-    fn almost_zero_with(self, tol: Self::Float) -> bool {
-        self.values.iter().map(|a| a.almost_zero_with(tol)).all(|x|x)
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        self.values.iter().zip(other.values.iter()).map(|(a, b)| a.abs_diff_eq(b, epsilon)).all(|x|x)
+    }
+    fn abs_diff_ne(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        !Self::abs_diff_eq(self, other, epsilon)
+    }
+}
+impl approx::RelativeEq for Matrix3x3{
+    fn default_max_relative() -> Self::Epsilon {
+        f32::default_max_relative()
+    }
+
+    fn relative_eq(&self, other: &Self, epsilon: Self::Epsilon, max_relative: Self::Epsilon)
+            -> bool {
+        self.values.iter().zip(other.values.iter()).map(|(a, b)| a.relative_eq(b, epsilon, max_relative)).all(|x|x)       
     }
 }
 impl fmt::Display for Matrix3x3 {
@@ -154,7 +176,7 @@ impl fmt::Display for Matrix3x3 {
     }
 }
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct Matrix4x4 {
     values: [f32; 16],
 }
@@ -245,7 +267,7 @@ impl Matrix4x4 {
     pub fn inverse(&self) -> Matrix4x4 {
         let det = self.determinant();
 
-        if det.almost_zero() {
+        if det == 0.0 {
             panic!("Matrix is not invertible");
         }
         let mut inv = Matrix4x4::new();
@@ -258,15 +280,26 @@ impl Matrix4x4 {
         inv
     }
 }
-impl almost::AlmostEqual for Matrix4x4 {
-    type Float = f32;
-    const DEFAULT_TOLERANCE: Self::Float = almost::F32_TOLERANCE;
-    const MACHINE_EPSILON: Self::Float = f32::EPSILON;
-    fn almost_equals_with(self, rhs: Self, tol: Self::Float) -> bool {
-        self.values.iter().zip(rhs.values.iter()).map(|(a, b)| a.almost_equals_with(*b, tol)).all(|x|x)
+impl approx::AbsDiffEq for Matrix4x4 {
+    type Epsilon = f32;
+    fn default_epsilon() -> Self::Epsilon {
+        f32::default_epsilon()
     }
-    fn almost_zero_with(self, tol: Self::Float) -> bool {
-        self.values.iter().map(|a| a.almost_zero_with(tol)).all(|x|x)
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        self.values.iter().zip(other.values.iter()).map(|(a, b)| a.abs_diff_eq(b, epsilon)).all(|x|x)
+    }
+    fn abs_diff_ne(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        !Self::abs_diff_eq(self, other, epsilon)
+    }
+}
+impl approx::RelativeEq for Matrix4x4{
+    fn default_max_relative() -> Self::Epsilon {
+        f32::default_max_relative()
+    }
+
+    fn relative_eq(&self, other: &Self, epsilon: Self::Epsilon, max_relative: Self::Epsilon)
+            -> bool {
+        self.values.iter().zip(other.values.iter()).map(|(a, b)| a.relative_eq(b, epsilon, max_relative)).all(|x|x)       
     }
 }
 impl ops::Mul<Matrix4x4> for Matrix4x4 {
@@ -315,6 +348,7 @@ impl fmt::Display for Matrix4x4 {
                 self.values[12], self.values[13], self.values[14], self.values[15],)
     }
 }
+/// Create an identity matrix
 pub fn identity() -> Matrix4x4 {
     let mut ident = Matrix4x4::new();
     ident.write_value(0, 0, 1.0);
@@ -326,7 +360,7 @@ pub fn identity() -> Matrix4x4 {
 
 #[cfg(test)]
 mod tests2x2 {
-    use almost::AlmostEqual;
+    use approx::assert_relative_eq;
 
     use crate::matrix;
     #[test]
@@ -359,21 +393,6 @@ mod tests2x2 {
         m.value_at(0, 2);
     }
     #[test]
-    fn almost_zero2x2() {
-        let m = matrix::Matrix2x2::new();
-
-        assert!(m.almost_zero());
-    }
-    #[should_panic]
-    #[test]
-    fn almost_zero_panic2x2() {
-        let mut m = matrix::Matrix2x2::new();
-
-        m.fill([-3.0, 5.0, 1.0, -2.0]);
-
-        assert!(m.almost_zero());
-    }
-    #[test]
     fn almost_equal2x2() {
         let mut m = matrix::Matrix2x2::new();
         let mut n = matrix::Matrix2x2::new();
@@ -381,7 +400,7 @@ mod tests2x2 {
         m.fill([-3.0, 5.0, 1.0, -2.0]);
         n.fill([-3.0, 5.0, 1.0, -2.0]);
 
-        assert!(m.almost_equals(n));
+        assert_relative_eq!(m, n);
     }
     #[should_panic]
     #[test]
@@ -392,7 +411,7 @@ mod tests2x2 {
         m.fill([-3.0, 5.0, 1.0, -2.0]);
         n.fill([-3.0, 5.0, 1.0, -2.001]);
 
-        assert!(m.almost_equals(n));
+        assert_relative_eq!(m, n);
     }
     #[test]
     fn find_determinant_2x2() {
@@ -407,7 +426,7 @@ mod tests2x2 {
 
 #[cfg(test)]
 mod tests3x3 {
-    use almost::AlmostEqual;
+    use approx::assert_relative_eq;
 
     use super::{Matrix3x3,Matrix2x2};
     #[test]
@@ -449,21 +468,6 @@ mod tests3x3 {
         m.value_at(1, 4);
     }
     #[test]
-    fn almost_zero3x3() {
-        let m = Matrix3x3::new();
-
-        assert!(m.almost_zero());
-    }
-    #[should_panic]
-    #[test]
-    fn almost_zero_panic3x3() {
-        let mut m = Matrix3x3::new();
-
-        m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
-
-        assert!(m.almost_zero());
-    }
-    #[test]
     fn almost_equal3x3() {
         let mut m = Matrix3x3::new();
         let mut n = Matrix3x3::new();
@@ -471,7 +475,7 @@ mod tests3x3 {
         m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
         n.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
 
-        assert!(m.almost_equals(n));
+        assert_relative_eq!(m, n);
     }
     #[should_panic]
     #[test]
@@ -482,7 +486,7 @@ mod tests3x3 {
         m.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.0]);
         n.fill([-3.0, 5.0, 0.0, 1.0, -2.0, -7.0, 0.0, 1.0, 1.01]);
 
-        assert!(m.almost_equals(n));
+        assert_relative_eq!(m, n);
     }
     #[test]
     fn get_sub3x3() {
@@ -496,7 +500,7 @@ mod tests3x3 {
                       0.0, 6.0,]);
         print!("{}",m);
 
-        assert!(m.submatrix(0, 2).almost_equals(n));
+        assert_relative_eq!(m.submatrix(0, 2), n);
     }
     #[test]
     fn calc_minor3x3() {
@@ -508,8 +512,7 @@ mod tests3x3 {
                       6.0, -1.0, 5.0]);
         n.fill([-3.0, 2.0,
                       0.0, 6.0,]);
-
-        assert!(m.minor(1, 0).almost_equals(25.0));
+        assert_relative_eq!(m.minor(1, 0), 25.0);
     }
     #[test]
     fn cofactor3x3() {
@@ -518,11 +521,10 @@ mod tests3x3 {
         m.fill([3.0, 5.0, 0.0,
                       2.0, -1.0, -7.0,
                       6.0, -1.0, 5.0]);
-
-        assert!(m.minor(0, 0).almost_equals(-12.0));
-        assert!(m.cofactor(0, 0).almost_equals(-12.0));
-        assert!(m.minor(1, 0).almost_equals(25.0));
-        assert!(m.cofactor(1, 0).almost_equals(-25.0));
+        assert_relative_eq!(m.minor(0, 0), -12.0);
+        assert_relative_eq!(m.cofactor(0, 0), -12.0);
+        assert_relative_eq!(m.minor(1, 0), 25.0);
+        assert_relative_eq!(m.cofactor(1, 0), -25.0);
     }
     #[test]
     fn determinant3x3() {
@@ -531,18 +533,18 @@ mod tests3x3 {
         m.fill([1.0, 2.0, 6.0,
                       -5.0, 8.0, -4.0,
                       2.0, 6.0, 4.0]);
-
-        assert!(m.cofactor(0, 0).almost_equals(56.0));
-        assert!(m.cofactor(0, 1).almost_equals(12.0));
-        assert!(m.cofactor(0, 2).almost_equals(-46.0));
-        assert!(m.determinant().almost_equals(-196.0));
+        assert_relative_eq!(m.cofactor(0, 0), 56.0);
+        assert_relative_eq!(m.cofactor(0, 1), 12.0);
+        assert_relative_eq!(m.cofactor(0, 2), -46.0);
+        assert_relative_eq!(m.determinant(), -196.0);
     }
 }
 
 #[cfg(test)]
 mod tests4x4 {
-    use almost::AlmostEqual;
+    use approx::assert_relative_eq;
 
+    use crate::DEFAULT_EPSILON;
     use crate::matrix;
     use crate::tuple;
 
@@ -588,23 +590,6 @@ mod tests4x4 {
         m.value_at(1, 5);
     }
     #[test]
-    fn almost_zero4x4() {
-        let m = matrix::Matrix4x4::new();
-
-        assert!(m.almost_zero());
-    }
-    #[should_panic]
-    #[test]
-    fn almost_zero_panic4x4() {
-        let mut m = matrix::Matrix4x4::new();
-
-        m.fill([
-            1.0, 2.0, 3.0, 4.0, 5.5, 6.5, 7.5, 8.5, 9.0, 10.0, 11.0, 12.0, 13.5, 14.5, 15.5,
-            16.5,
-        ]);
-        assert!(m.almost_zero());
-    }
-    #[test]
     fn almost_equal4x4() {
         let mut m = matrix::Matrix4x4::new();
         let mut n = matrix::Matrix4x4::new();
@@ -618,7 +603,7 @@ mod tests4x4 {
             16.5,
         ]);
 
-        assert!(m.almost_equals(n));
+        assert_relative_eq!(m, n);
     }
     #[should_panic]
     #[test]
@@ -636,7 +621,7 @@ mod tests4x4 {
             16.51,
         ]);
 
-        assert!(m.almost_equals(n));
+        assert_relative_eq!(m, n);
     }
     #[test]
     fn multiply4x4() {
@@ -655,9 +640,8 @@ mod tests4x4 {
         x.fill([
             20.0, 22.0, 50.0, 48.0, 44.0, 54.0, 114.0, 108.0, 40.0, 58.0, 110.0, 102.0, 16.0, 26.0, 46.0,
             42.0,
-        ]);
-        
-        assert!((m*n).almost_equals(x));
+        ]);        
+        assert_relative_eq!((m*n), x);
     }
     #[test]
     fn multiply4x4_with_tuple() {
@@ -669,8 +653,7 @@ mod tests4x4 {
             1.0, 2.0, 3.0, 4.0, 2.0, 4.0, 4.0, 2.0, 8.0, 6.0, 4.0, 1.0, 0.0, 0.0, 0.0,
             1.0,
         ]);
-        
-        assert!((m*n).almost_equals(x));
+        assert_relative_eq!((m*n), x);
     }
     #[test]
     fn multiply_by_identity() {
@@ -689,9 +672,8 @@ mod tests4x4 {
         i.fill([
             1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
             1.0,
-        ]);
-        
-        assert!((m*i).almost_equals(m2));
+        ]);        
+        assert_relative_eq!((m*i), m2);
     }
     #[test]
     fn get_sub4x4() {
@@ -705,8 +687,7 @@ mod tests4x4 {
         n.fill([-6.0, 1.0, 6.0,
                       -8.0, 8.0, 6.0,
                       -7.0, -1.0, 1.0]);
-
-        assert!(m.submatrix(2, 1).almost_equals(n));
+        assert_relative_eq!(m.submatrix(2, 1), n);
     }
     #[test]
     fn transpose4x4() {
@@ -724,24 +705,8 @@ mod tests4x4 {
             9.0, 8.0, 8.0, 0.0,
             3.0, 0.0, 5.0, 5.0,
             0.0, 8.0, 3.0, 8.0,
-        ]);
-        
-        assert!(m.transpose().almost_equals(n));
-    }
-    #[test]
-    fn calc_minor4x4() {
-        let mut m = matrix::Matrix4x4::new();
-        let mut n = matrix::Matrix3x3::new();
-        
-        m.fill([-6.0, 1.0, 1.0, 6.0,
-                      -8.0, 5.0, 8.0, 6.0,
-                      -1.0, 0.0, 8.0, 2.0,
-                      -7.0, 1.0, -1.0, 1.0]);
-        n.fill([-6.0, 1.0, 6.0,
-                      -8.0, 8.0, 6.0,
-                      -7.0, -1.0, 1.0]);
-
-        //assert!(m.minor(1, 0).almost_equals(25.0));
+        ]);        
+        assert_relative_eq!(m.transpose(), n);
     }
     #[test]
     fn determinant4x4() {
@@ -751,12 +716,11 @@ mod tests4x4 {
                       -3.0, 1.0, 7.0, 3.0,
                       1.0, 2.0, -9.0, 6.0,
                       -6.0, 7.0, 7.0, -9.0]);
-
-        assert!(m.cofactor(0, 0).almost_equals(690.0));
-        assert!(m.cofactor(0, 1).almost_equals(447.0));
-        assert!(m.cofactor(0, 2).almost_equals(210.0));
-        assert!(m.cofactor(0, 3).almost_equals(51.0));
-        assert!(m.determinant().almost_equals(-4071.0));
+        assert_relative_eq!(m.cofactor(0, 0), 690.0);
+        assert_relative_eq!(m.cofactor(0, 1), 447.0);
+        assert_relative_eq!(m.cofactor(0, 2), 210.0);
+        assert_relative_eq!(m.cofactor(0, 3), 51.0);
+        assert_relative_eq!(m.determinant(), -4071.0);
     }
     #[test]
     fn invertible4x4() {
@@ -766,8 +730,7 @@ mod tests4x4 {
                       5.0, 5.0, 7.0, 6.0,
                       4.0, -9.0, 3.0, -7.0,
                       9.0, 1.0, 7.0, -6.0]);
-
-        assert!(m.determinant().almost_equals(-2120.0));
+        assert_relative_eq!(m.determinant(), -2120.0);
         assert!(m.invertible());
     }
     #[test]
@@ -779,7 +742,7 @@ mod tests4x4 {
                       0.0, -5.0, 1.0, -5.0,
                       0.0, 0.0, 0.0, 0.0]);
 
-        assert!(m.determinant().almost_equals(-0.0));
+        assert!(m.determinant() == 0.0);
         assert!(!m.invertible());
     }
     #[test]
@@ -797,13 +760,11 @@ mod tests4x4 {
                     -0.52256, -0.81391, -0.30075, 0.30639]);
 
         let n = m.inverse();
-
-        assert!(m.determinant().almost_equals(532.0));
-        assert!(m.cofactor(2, 3).almost_equals(-160.0));
-        assert!(n.value_at(3, 2).almost_equals(-160.0/532.0));
-        assert!(m.cofactor(3, 2).almost_equals(105.0));
-        assert!(n.value_at(2, 3).almost_equals(105.0/532.0));
-        assert!(n.almost_equals(b));
+        assert_relative_eq!(m.determinant(), 532.0);
+        assert_relative_eq!(m.cofactor(2, 3), -160.0);
+        assert_relative_eq!(n.value_at(3, 2), -160.0/532.0);
+        assert_relative_eq!(m.cofactor(3, 2), 105.0);
+        assert_relative_eq!(n.value_at(2, 3), 105.0/532.0);
     }
     #[test]
     fn invert4x4_2() {
@@ -820,8 +781,7 @@ mod tests4x4 {
                      -0.69231, -0.69231, -0.76923, -1.92308]);
 
         let n = m.inverse();
-
-        assert!(n.almost_equals(b));
+        assert_relative_eq!(n, b, epsilon=DEFAULT_EPSILON);
     }
     #[test]
     fn invert_multiply4x4() {
@@ -836,9 +796,7 @@ mod tests4x4 {
                     7.0, 5.0, 6.0, 1.0,
                     -6.0, 0.0, 9.0, 6.0,
                     -3.0, 0.0, -9.0, -4.0]);
-
         let c = a*b;
-
-        assert!((c*b.inverse()).almost_equals(a));
+        assert_relative_eq!((c*b.inverse()), a, epsilon=DEFAULT_EPSILON);
     }
 }
