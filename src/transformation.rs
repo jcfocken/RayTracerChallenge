@@ -1,5 +1,6 @@
 use crate::matrix::{Matrix4x4, identity};
 
+/// Returns a matrix that translates by the given x, y, and z values.
 pub fn translation(x: f32, y: f32, z: f32) -> Matrix4x4 {
     let mut mat = identity();
     mat.write_value(0, 3, x);
@@ -7,6 +8,7 @@ pub fn translation(x: f32, y: f32, z: f32) -> Matrix4x4 {
     mat.write_value(2, 3, z);
     mat
 }
+/// Returns a matrix that scales by the given x, y, and z values.
 pub fn scale(x: f32, y: f32, z: f32) -> Matrix4x4 {     
     let mut mat = identity();
     mat.write_value(0, 0, x);
@@ -14,6 +16,7 @@ pub fn scale(x: f32, y: f32, z: f32) -> Matrix4x4 {
     mat.write_value(2, 2, z);
     mat
 }
+/// Returns a matrix that rotates around the x axis by the given radians.
 pub fn rot_x(r: f32) ->  Matrix4x4 {     
     let mut mat = identity();
     mat.write_value(1, 1, r.cos());
@@ -22,6 +25,7 @@ pub fn rot_x(r: f32) ->  Matrix4x4 {
     mat.write_value(2, 2, r.cos());
     mat
 }
+/// Returns a matrix that rotates around the y axis by the given radians.
 pub fn rot_y(r: f32) ->  Matrix4x4 {     
     let mut mat = identity();
     mat.write_value(0, 0, r.cos());
@@ -30,6 +34,7 @@ pub fn rot_y(r: f32) ->  Matrix4x4 {
     mat.write_value(2, 2, r.cos());
     mat
 }
+/// Returns a matrix that rotates around the z axis by the given radians.
 pub fn rot_z(r: f32) ->  Matrix4x4 {     
     let mut mat = identity();
     mat.write_value(0, 0, r.cos());
@@ -38,6 +43,7 @@ pub fn rot_z(r: f32) ->  Matrix4x4 {
     mat.write_value(1, 1, r.cos());
     mat
 }
+/// Returns a matrix that shears by the given x, y, and z values.
 pub fn shear(xy: f32, xz: f32, yx: f32, yz: f32, zx: f32, zy: f32,) ->  Matrix4x4 {     
     let mut mat = identity();
     mat.write_value(0, 1, xy);

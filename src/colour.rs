@@ -7,7 +7,6 @@ pub struct Colour {
     pub green: f32,
     pub blue: f32,
 }
-
 pub const WHITE: Colour = Colour {
     red: 1.0,
     green: 1.0,
@@ -35,6 +34,7 @@ pub const BLUE: Colour = Colour {
 };
 
 impl Colour {
+    /// Create a new colour struct
     pub fn new(red: f32, green: f32, blue: f32) -> Colour {
         Colour { red, green, blue }
     }

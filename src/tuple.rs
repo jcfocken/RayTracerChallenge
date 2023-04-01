@@ -1,5 +1,6 @@
 use std::{ops, fmt};
 #[derive(Debug, Clone, Copy, PartialEq)]
+/// A tuple struct. Can be used to represent points and vectors.
 pub struct Tuple {
     pub x: f32,
     pub y: f32,
@@ -8,15 +9,19 @@ pub struct Tuple {
 }
 
 impl Tuple {
+    /// Create a new tuple struct
     pub fn new(x: f32, y: f32, z: f32, w: f32) -> Tuple {
         Tuple { x, y, z, w }
     }
+    /// Check if tuple is a point
     pub fn is_point(&self) -> bool {
         self.w == 1.0
     }
+    /// Check if tuple is a vector
     pub fn is_vector(&self) -> bool {
         self.w == 0.0
     }
+    /// Return the absolute magnitude of a tuple
     pub fn magnitude(&self) -> f32 {
         let mut sum = 0.0;
         sum += self.x.powi(2);
@@ -25,6 +30,7 @@ impl Tuple {
         sum += self.w.powi(2);
         sum.sqrt()
     }
+    /// Return a normalized tuple
     pub fn normalize(&self) -> Tuple {
         let mag = self.magnitude();
         Tuple {
@@ -34,6 +40,7 @@ impl Tuple {
             w: self.w / mag,
         }
     }
+    /// Return the dot product of two tuples
     pub fn dot(&self, other: Tuple) -> f32 {
         let mut sum = 0.0;
         sum += self.x * other.x;
@@ -42,6 +49,7 @@ impl Tuple {
         sum += self.w * other.w;
         sum
     }
+    /// Return the cross product of two tuples
     pub fn cross(&self, other: Tuple) -> Tuple {
         vector(
             self.y * other.z - self.z * other.y,

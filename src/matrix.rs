@@ -3,20 +3,24 @@ use std::{ops, fmt};
 use crate::{tuple::Tuple};
 
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
+/// A 2 by 2 matrix.
 pub struct Matrix2x2 {
     values: [f32; 4],
 }
 impl Matrix2x2 {
+    /// Creates a new matrix with all values set to 0.
     pub fn new() -> Matrix2x2 {
         let vector = [0.0; 4];
         Matrix2x2 { values: vector }
     }
+    /// Creates a new matrix with the given values. The values are given in row major order.
     pub fn fill(&mut self, list: [f32; 4]) {
         if list.len() > (4) {
             panic!("Input list to long");
         }
         self.values = list;
-    }        
+    }
+    /// Writes a value to the matrix at the given position.
     pub fn write_value(&mut self, m: usize, n: usize, value: f32) {
         if m >= 2 {
             panic!("m out of bounds");
@@ -27,6 +31,7 @@ impl Matrix2x2 {
         let index = m * 2 + n;
         self.values[index] = value;
     }
+    /// Returns the value at the given position.
     pub fn value_at(&self, m: usize, n: usize) -> f32 {
         if m >= 2 {
             panic!("m out of bounds");
@@ -37,6 +42,7 @@ impl Matrix2x2 {
         let index = m * 2 + n;
         self.values[index]
     }
+    ///  Returns the determinant of the matrix.
     pub fn determinant(&self) -> f32 {
         self.value_at(0, 0)*self.value_at(1, 1)-self.value_at(0, 1)*self.value_at(1, 0)
     }
@@ -70,20 +76,24 @@ impl fmt::Display for Matrix2x2 {
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
+/// A 3 by 3 matrix.
 pub struct Matrix3x3 {
     values: [f32; 9],
 }
 impl Matrix3x3 {
+    /// Creates a new matrix with all values set to 0.
     pub fn new() -> Matrix3x3 {
         let vector = [0.0; 9];
         Matrix3x3 { values: vector }
-    }   
+    }
+    /// Creates a new with the given values. The values are given in row major order.
     pub fn fill(&mut self, list: [f32; 9]) {
         if list.len() > (9) {
             panic!("Input list to long");
         }
         self.values = list;
     }   
+    /// Writes a value to the matrix at the given position.
     pub fn write_value(&mut self, m: usize, n: usize, value: f32) {
         if m >= 3 {
             panic!("m out of bounds");
@@ -94,6 +104,7 @@ impl Matrix3x3 {
         let index = m * 3 + n;
         self.values[index] = value;
     }
+    /// Returns the value at the given position.
     pub fn value_at(&self, m: usize, n: usize) -> f32 {
         if m >= 3 {
             panic!("m out of bounds");
@@ -104,6 +115,7 @@ impl Matrix3x3 {
         let index = m * 3 + n;
         self.values[index]
     }
+    /// Returns the submatrix of the matrix at the given position.
     pub fn submatrix(&self, m: usize, n: usize) -> Matrix2x2 {
         if m >= 3 {
             panic!("m out of bounds");
@@ -125,10 +137,12 @@ impl Matrix3x3 {
         }
         sub
     }
+    /// Returns the minor of the matrix at the given position.
     pub fn minor(&self, m: usize, n: usize) -> f32 {
         let sub = self.submatrix(m, n);
         sub.determinant()
     }
+    /// Returns the cofactor of the matrix at the given position.
     pub fn cofactor(&self, m: usize, n: usize) -> f32 {
         let minor = self.minor(m, n);
         if (m + n) & 1  == 0 {
@@ -137,6 +151,7 @@ impl Matrix3x3 {
             -minor
         }
     }
+    /// Returns the determinant of the matrix.
     pub fn determinant(&self) -> f32 {
         let mut determinant = 0.0;
         for m in 0..3 {
@@ -177,21 +192,25 @@ impl fmt::Display for Matrix3x3 {
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
+/// A 4 by 4 matrix.
 pub struct Matrix4x4 {
     values: [f32; 16],
 }
 
 impl Matrix4x4 {
+    /// Creates a new matrix with all values set to 0.
     pub fn new() -> Matrix4x4 {
         let vector = [0.0; 16];
         Matrix4x4 { values: vector }
     }
+    /// Creates a new matrix with the given values. The values are given in row major order.
     pub fn fill(&mut self, list: [f32; 16]) {
         if list.len() > (16) {
             panic!("Input list to long");
         }
         self.values = list;
     }
+    /// Writes a value to the matrix at the given position.
     pub fn write_value(&mut self, m: usize, n: usize, value: f32) {
         if m >= 4 {
             panic!("m out of bounds");
@@ -202,6 +221,7 @@ impl Matrix4x4 {
         let index = m * 4 + n;
         self.values[index] = value;
     }
+    /// Returns the value at the given position.
     pub fn value_at(&self, m: usize, n: usize) -> f32 {
         if m >= 4 {
             panic!("m out of bounds");
@@ -212,6 +232,7 @@ impl Matrix4x4 {
         let index = m * 4 + n;
         self.values[index]
     }
+    /// Returns the transpose of the matrix.
     pub fn transpose(&self) -> Matrix4x4 {
         let mut transposed = Matrix4x4::new();
         for row in 0..4 {
@@ -221,6 +242,7 @@ impl Matrix4x4 {
         }
         transposed
     }
+    /// Returns the submatrix of the matrix at the given position.
     pub fn submatrix(&self, m: usize, n: usize) -> Matrix3x3 {
         if m >= 4 {
             panic!("m out of bounds");
@@ -242,10 +264,12 @@ impl Matrix4x4 {
         }
         sub
     }
+    /// Returns the minor of the matrix at the given position.
     pub fn minor(&self, m: usize, n: usize) -> f32 {
         let sub = self.submatrix(m, n);
         sub.determinant()
     }
+    /// Returns the cofactor of the matrix at the given position.
     pub fn cofactor(&self, m: usize, n: usize) -> f32 {
         let minor = self.minor(m, n);
         if (m + n) & 1  == 0 {
@@ -254,6 +278,7 @@ impl Matrix4x4 {
             -minor
         }
     }
+    /// Returns the determinant of the matrix.
     pub fn determinant(&self) -> f32 {
         let mut determinant = 0.0;
         for m in 0..4 {
@@ -261,9 +286,11 @@ impl Matrix4x4 {
         }
         determinant
     }
+    /// Returns true if the matrix is invertible.
     pub fn invertible(&self) -> bool {
         self.determinant() != 0.0
     }
+    /// Returns the inverse of the matrix.
     pub fn inverse(&self) -> Matrix4x4 {
         let det = self.determinant();
 
@@ -304,7 +331,6 @@ impl approx::RelativeEq for Matrix4x4{
 }
 impl ops::Mul<Matrix4x4> for Matrix4x4 {
     type Output = Self;
-
     fn mul(self, rhs: Matrix4x4) -> Self::Output {            
         let mut vector = [0.0; 16];
         for m in 0..4 {
@@ -322,7 +348,6 @@ impl ops::Mul<Matrix4x4> for Matrix4x4 {
 }
 impl ops::Mul<Tuple> for Matrix4x4 {
     type Output = Tuple;
-
     fn mul(self, rhs: Tuple) -> Self::Output {            
         let mut vector = [0.0; 4];
         for (x, element) in vector.iter_mut().enumerate() {
@@ -348,7 +373,7 @@ impl fmt::Display for Matrix4x4 {
                 self.values[12], self.values[13], self.values[14], self.values[15],)
     }
 }
-/// Create an identity matrix
+/// Create a 4 by 4 identity matrix
 pub fn identity() -> Matrix4x4 {
     let mut ident = Matrix4x4::new();
     ident.write_value(0, 0, 1.0);
