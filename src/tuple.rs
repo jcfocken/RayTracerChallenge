@@ -13,6 +13,24 @@ impl Tuple {
     pub fn new(x: f32, y: f32, z: f32, w: f32) -> Tuple {
         Tuple { x, y, z, w }
     }
+    /// Create a new point tuple
+    pub fn point(x: f32, y: f32, z: f32) -> Tuple {
+        Tuple {
+            x,
+            y,
+            z,
+            w: 1.0,
+        }
+    }
+    /// Create a new vector tuple
+    pub fn vector(x: f32, y: f32, z: f32) -> Tuple {
+        Tuple {
+            x,
+            y,
+            z,
+            w: 0.0,
+        }
+    }
     /// Check if tuple is a point
     pub fn is_point(&self) -> bool {
         self.w == 1.0
@@ -33,11 +51,10 @@ impl Tuple {
     /// Return a normalized tuple
     pub fn normalize(&self) -> Tuple {
         let mag = self.magnitude();
-        Tuple {
-            x: self.x / mag,
-            y: self.y / mag,
-            z: self.z / mag,
-            w: self.w / mag,
+        if mag > 0.0 {            
+            *self/mag
+        } else {
+            *self
         }
     }
     /// Return the dot product of two tuples
@@ -383,6 +400,12 @@ mod tests {
         let b: Tuple = a.normalize();
         let mag = b.magnitude();
         assert_relative_eq!(mag, 1.0);
+    }
+    #[test]
+    fn normalize_zero_vec() {
+        let a: Tuple = vector(0.0, 0.0, 0.0);
+        let b: Tuple = a.normalize();
+        assert_relative_eq!(b.x, 0.0);
     }
     #[test]
     fn dot() {

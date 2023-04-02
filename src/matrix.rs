@@ -13,7 +13,7 @@ impl Matrix2x2 {
         let vector = [0.0; 4];
         Matrix2x2 { values: vector }
     }
-    /// Creates a new matrix with the given values. The values are given in row major order.
+    /// Fills a matrix with the given values. The values are given in row major order.
     pub fn fill(&mut self, list: [f32; 4]) {
         if list.len() > (4) {
             panic!("Input list to long");
@@ -86,7 +86,7 @@ impl Matrix3x3 {
         let vector = [0.0; 9];
         Matrix3x3 { values: vector }
     }
-    /// Creates a new with the given values. The values are given in row major order.
+    /// Fills a matrix with the given values. The values are given in row major order.
     pub fn fill(&mut self, list: [f32; 9]) {
         if list.len() > (9) {
             panic!("Input list to long");
@@ -203,7 +203,7 @@ impl Matrix4x4 {
         let vector = [0.0; 16];
         Matrix4x4 { values: vector }
     }
-    /// Creates a new matrix with the given values. The values are given in row major order.
+    /// Fills a matrix with the given values. The values are given in row major order.
     pub fn fill(&mut self, list: [f32; 16]) {
         if list.len() > (16) {
             panic!("Input list to long");
@@ -671,8 +671,8 @@ mod tests4x4 {
     #[test]
     fn multiply4x4_with_tuple() {
         let mut m = matrix::Matrix4x4::new();
-        let n = tuple::Tuple::new(1.0, 2.0, 3.0, 1.0);
-        let x = tuple::Tuple::new(18.0, 24.0, 33.0, 1.0);            
+        let n = tuple::Tuple::point(1.0, 2.0, 3.0);
+        let x = tuple::Tuple::point(18.0, 24.0, 33.0);            
         
         m.fill([
             1.0, 2.0, 3.0, 4.0, 2.0, 4.0, 4.0, 2.0, 8.0, 6.0, 4.0, 1.0, 0.0, 0.0, 0.0,

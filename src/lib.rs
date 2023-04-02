@@ -4,6 +4,8 @@ pub mod canvas;
 pub mod projectile;
 pub mod matrix;
 pub mod transformation;
+pub mod ray;
+pub mod shapes;
 pub mod run {
     use crate::{canvas, colour, projectile, tuple, transformation};
     use std::f32::consts::PI;
