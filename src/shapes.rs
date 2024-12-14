@@ -1,4 +1,4 @@
-use crate::tuple;
+use crate::matrix;
 /// An enum of all the shapes that can be intersected by a ray.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Shape {
@@ -7,12 +7,19 @@ pub enum Shape {
 /// A sphere.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Sphere {
-    pub center: tuple::Tuple,
-    pub radius: f32,
+    pub transform: matrix::Matrix4x4,
 }
 impl Sphere {
-    /// Create a new sphere with the given center and radius.
-    pub fn new(center: tuple::Tuple, radius: f32) -> Sphere {
-        Sphere { center, radius }
+    /// Create a new sphere
+    pub fn new() -> Sphere {
+        Sphere {transform : matrix::identity() }
+    }
+    pub fn set_transform(&mut self, t: matrix::Matrix4x4) {
+        self.transform = t;
+    }
+}
+impl Default for Sphere {
+    fn default() -> Self {
+        Self::new()
     }
 }

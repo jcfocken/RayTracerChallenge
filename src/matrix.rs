@@ -1,6 +1,6 @@
 use std::{ops, fmt};
 
-use crate::{tuple::Tuple};
+use crate::tuple::Tuple;
 
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
 /// A 2 by 2 matrix.
@@ -568,10 +568,7 @@ mod tests3x3 {
 #[cfg(test)]
 mod tests4x4 {
     use approx::assert_relative_eq;
-
-    use crate::DEFAULT_EPSILON;
-    use crate::matrix;
-    use crate::tuple;
+    use crate::{DEFAULT_EPSILON, matrix, tuple};
 
     #[test]
     fn create_matrix4x4() {
