@@ -668,8 +668,8 @@ mod tests4x4 {
     #[test]
     fn multiply4x4_with_tuple() {
         let mut m = matrix::Matrix4x4::new();
-        let n = tuple::Tuple::point(1.0, 2.0, 3.0);
-        let x = tuple::Tuple::point(18.0, 24.0, 33.0);            
+        let n = tuple::point(1.0, 2.0, 3.0);
+        let x = tuple::point(18.0, 24.0, 33.0);            
         
         m.fill([
             1.0, 2.0, 3.0, 4.0, 2.0, 4.0, 4.0, 2.0, 8.0, 6.0, 4.0, 1.0, 0.0, 0.0, 0.0,

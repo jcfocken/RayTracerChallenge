@@ -1,4 +1,5 @@
-use crate::{matrix::Matrix4x4, shapes::{self, Shape}, tuple::{self, point}};
+use crate::{colour::{self, Colour}, matrix::Matrix4x4, shapes::{self, Material, Shape}, tuple::{self, point, vector, Tuple}};
+use std::cmp::Ordering;
 
 /// A ray.
 #[derive(Debug)]
@@ -40,45 +41,126 @@ impl Ray {
         let d = m*self.direction;
         Ray::new(p, d)
     }
+    pub fn prepare_computations(self, inter: &Intersection) -> Computations {        
+        let point = self.position(inter.t);
+        let mut normalv;
+        let eyev = -(self.direction);
+        let inside;
+        match inter.object {
+            Shape::Sphere(s) => {
+                normalv = s.normal_at(point);
+            }
+        }
+        if normalv.dot(eyev) < 0.0 {
+            inside = true;
+            normalv = vector(0.0, 0.0, 0.0) - normalv;
+        } else {            
+            inside = false;
+            normalv = normalv;
+        }
+        Computations{t: inter.t, object: inter.object, point, normalv, eyev, inside}
+    }
+}
+pub struct Computations {
+    pub t: f32,
+    pub object: Shape,
+    pub point: Tuple,
+    pub normalv: Tuple,
+    pub eyev: Tuple,
+    pub inside: bool,
 }
 /// An intersection between a ray and a shape.
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Intersection {
     pub t: f32,
-    pub shape: shapes::Shape,
+    pub object: shapes::Shape,
 }
 impl Intersection {
     /// Create a new intersection with the given t and shape.
-    pub fn new(t: f32, shape: shapes::Shape) -> Intersection {
-        Intersection { t, shape }
+    pub fn new(t: f32, object: shapes::Shape) -> Intersection {
+        Intersection { t, object }
     }
 }
+impl Ord for Intersection {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.t.total_cmp(&other.t)
+    }
+}
+impl PartialOrd for Intersection {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}impl PartialEq for Intersection {
+    fn eq(&self, other: &Self) -> bool {
+        (self.t) == (other.t)
+    }
+}
+impl Eq for Intersection { }
+ 
 /// A collection of intersections.
+#[derive(Debug)]
 pub struct Intersections {
     pub inters: Vec<Intersection>,
 }
 impl Intersections {
     /// Create a new collection of intersections.
-    pub fn new(inters: Vec<Intersection>) -> Intersections{
-        Intersections{inters}
+    pub fn new(inters: Vec<Intersection>) -> Intersections {
+        let mut xs = Intersections{inters};
+        xs.inters.sort();
+        xs
     }
     /// Return the closest intersection that is not behind the ray.
-    /// TODO Keep list ordered for performance
     pub fn hit(&self) -> Option<Intersection>{
-        let min_t = f32::INFINITY;
-        let mut closest_inter= None;
-        for inter in &self.inters {
-            if inter.t < min_t && inter.t > 0.0{
-                closest_inter = Some(*inter);
+        let mut hit = None;
+        for x in self.inters.clone() {
+            if x.t > 0.0 {
+                hit = Some(x);
+                break;
             }
         }
-        closest_inter
+        hit
     }
+}
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct Light {
+    pub position: Tuple,
+    pub intensity: Colour,
+}
+impl Light {
+    /// Create a new light source
+    pub fn new(position: Tuple, intensity: Colour) -> Light{
+        Light {position, intensity}
+    }
+}
+pub fn lighting(material: Material, light: Light, point: Tuple, eyev: Tuple, normalv: Tuple) -> Colour{
+    let effective_colour = material.colour * light.intensity;
+    let ambient = effective_colour * material.ambient;
+    let lightv = (light.position - point).normalize();
+    let light_dot_normal = lightv.dot(normalv);     
+    let diffuse;
+    let specular;
+    if light_dot_normal < 0.0 {
+        diffuse = colour::BLACK;
+        specular = colour::BLACK;
+    } else {
+        diffuse = effective_colour * material.diffuse * lightv.dot(normalv);
+        let reflectv = (-lightv).reflect(normalv);
+        let reflect_dot_eye = reflectv.dot(eyev);
+        if reflect_dot_eye <= 0.0 {
+            specular = colour::BLACK;
+        } else {
+            let factor = f32::powf(reflect_dot_eye, material.shininess);
+            specular = light.intensity * material.specular * factor;
+        }
+    }
+    ambient + diffuse + specular
 }
 #[cfg(test)]
 mod tests {
-    use crate::{ray::{Intersections, Ray}, shapes::{self, Sphere}, transformation::{scale, translation}, tuple::{point, vector}, matrix};
+    use crate::{colour::{self, Colour}, matrix, ray::{lighting, Intersections, Light, Ray}, shapes::{self, Material, Shape, Sphere}, transformation::{rot_z, scale, translation}, tuple::{point, vector}, DEFAULT_EPSILON};
     use super::Intersection;
+    use approx::assert_relative_eq;
+    use std::{f32::consts::PI, vec};
 
     #[test]
     fn create_ray() {
@@ -144,7 +226,7 @@ mod tests {
         let s = shapes::Shape::Sphere(Sphere::new());
         let i = Intersection::new(3.5, s);
         assert_eq!(i.t, 3.5);
-        assert_eq!(i.shape, s);
+        assert_eq!(i.object, s);
     }
     #[test]
     fn aggregating_intersection() {
@@ -162,8 +244,8 @@ mod tests {
         let s = shapes::Shape::Sphere(Sphere::new());        
         let xs = r.intersect(&s);
         assert_eq!(xs.len(), 2);
-        assert_eq!(xs[0].shape, s);
-        assert_eq!(xs[1].shape, s);
+        assert_eq!(xs[0].object, s);
+        assert_eq!(xs[1].object, s);
     }
     #[test]
     fn hit_positive_t() {
@@ -247,5 +329,175 @@ mod tests {
         let xs = r.intersect(&shapes::Shape::Sphere(s));
         assert_eq!(xs.len(), 0);
     }
-
+    #[test]
+    fn normal_x() {
+        let s = Sphere::new();
+        let n = s.normal_at(point(1.0, 0.0, 0.0));
+        assert_eq!(n, vector(1.0, 0.0, 0.0));
+    }
+    #[test]
+    fn normal_y() {
+        let s = Sphere::new();
+        let n = s.normal_at(point(0.0, 1.0, 0.0));
+        assert_eq!(n, vector(0.0, 1.0, 0.0));
+    }
+    #[test]
+    fn normal_z() {
+        let s = Sphere::new();
+        let n = s.normal_at(point(0.0, 0.0, 1.0));
+        assert_eq!(n, vector(0.0, 0.0, 1.0));
+    }
+    #[test]
+    fn normal_nonaxial() {
+        let s = Sphere::new();
+        let n = s.normal_at(point(f32::sqrt(3.0)/3.0, f32::sqrt(3.0)/3.0, f32::sqrt(3.0)/3.0));
+        assert_relative_eq!(n, vector(f32::sqrt(3.0)/3.0, f32::sqrt(3.0)/3.0, f32::sqrt(3.0)/3.0), epsilon=DEFAULT_EPSILON);
+    }
+    #[test]
+    fn normal_is_normalised() {
+        let s = Sphere::new();
+        let n = s.normal_at(point(f32::sqrt(3.0)/3.0, f32::sqrt(3.0)/3.0, f32::sqrt(3.0)/3.0));
+        assert_relative_eq!(n, n.normalize(), epsilon=DEFAULT_EPSILON);
+    }
+    #[test]
+    fn normal_translated() {
+        let mut s = Sphere::new();
+        let t = translation(0.0, 1.0, 0.0);
+        s.set_transform(t);
+        let n = s.normal_at(point(0.0, 1.70711, -0.70711));
+        assert_relative_eq!(n, vector(0.0, 0.70711, -0.70711), epsilon=DEFAULT_EPSILON);
+    }
+    #[test]
+    fn normal_transformed() {
+        let mut s = Sphere::new();
+        let t = scale(1.0, 0.5, 1.0)*rot_z(PI/5.0);
+        s.set_transform(t);
+        let n = s.normal_at(point(0.0, f32::sqrt(2.0)/2.0, -f32::sqrt(2.0)/2.0));
+        assert_relative_eq!(n, vector(0.0, 0.97014, -0.24254), epsilon=DEFAULT_EPSILON);
+    }
+    #[test]
+    fn reflect_45() {
+        let v = vector(1.0, -1.0, 0.0);
+        let n = vector(0.0, 1.0, 0.0);
+        let r = v.reflect(n);
+        assert_eq!(r, vector(1.0, 1.0, 0.0));
+    }
+    #[test]
+    fn reflect_slanted() {
+        let v = vector(0.0, -1.0, 0.0);
+        let n = vector(f32::sqrt(2.0)/2.0, f32::sqrt(2.0)/2.0, 0.0);
+        let r = v.reflect(n);
+        assert_relative_eq!(r, vector(1.0, 0.0, 0.0), epsilon=DEFAULT_EPSILON);
+    }
+    #[test]
+    fn create_light() {
+        let intensity = colour::Colour::new(1.0, 1.0, 1.0);
+        let pos = point(0.0, 0.0, 0.0);
+        let light = Light::new(pos, intensity);
+        assert_eq!(light.position, pos);
+        assert_eq!(light.intensity, intensity);
+    }
+    #[test]
+    fn create_default_material() {
+        let m = Material::new();
+        assert_eq!(m.colour, colour::WHITE);
+        assert_eq!(m.ambient, 0.1);
+        assert_eq!(m.diffuse, 0.9);
+        assert_eq!(m.specular, 0.9);
+        assert_eq!(m.shininess, 200.0);
+    }
+    #[test]
+    fn lighting_with_eye_between() {
+        let m = Material::new();
+        let p = point(0.0, 0.0, 0.0);
+        let eyev = vector(0.0, 0.0, -1.0);
+        let normalv = vector(0.0, 0.0, -1.0);
+        let light = Light::new(point(0.0, 0.0, -10.0), colour::WHITE);
+        let result = lighting(m, light, p, eyev, normalv);
+        assert_eq!(result, Colour::new(1.9, 1.9, 1.9));
+    }
+    #[test]
+    fn lighting_with_eye_between_spec_only() {
+        let mut m = Material::new();
+        m.ambient = 0.0;
+        m.diffuse = 0.0;
+        m.specular = 0.5;
+        let p = point(0.0, 0.0, 0.0);
+        let eyev = vector(0.0, 0.0, -1.0);
+        let normalv = vector(0.0, 0.0, -1.0);
+        let light = Light::new(point(0.0, 0.0, -10.0), colour::WHITE);
+        let result = lighting(m, light, p, eyev, normalv);
+        assert_eq!(result, Colour::new(0.5, 0.5, 0.5));
+    }
+    #[test]
+    fn lighting_with_eye_at_45() {
+        let m = Material::new();
+        let p = point(0.0, 0.0, 0.0);
+        let eyev = vector(0.0, f32::sqrt(2.0)/2.0, -f32::sqrt(2.0)/2.0);
+        let normalv = vector(0.0, 0.0, -1.0);
+        let light = Light::new(point(0.0, 0.0, -10.0), colour::WHITE);
+        let result = lighting(m, light, p, eyev, normalv);
+        assert_eq!(result, Colour::new(1.0, 1.0, 1.0));
+    }
+    #[test]
+    fn lighting_with_light_at_45() {
+        let m = Material::new();
+        let p = point(0.0, 0.0, 0.0);
+        let eyev = vector(0.0, 0.0, -1.0);
+        let normalv = vector(0.0, 0.0, -1.0);
+        let light = Light::new(point(0.0, 10.0, -10.0), colour::WHITE);
+        let result = lighting(m, light, p, eyev, normalv);
+        assert_relative_eq!(result, Colour::new(0.7364, 0.7364, 0.7364), epsilon=DEFAULT_EPSILON);
+    }
+    #[test]
+    fn lighting_with_eye_and_light_at_45() {
+        let m = Material::new();
+        let p = point(0.0, 0.0, 0.0);
+        let eyev = vector(0.0, -f32::sqrt(2.0)/2.0, -f32::sqrt(2.0)/2.0);
+        let normalv = vector(0.0, 0.0, -1.0);
+        let light = Light::new(point(0.0, 10.0, -10.0), colour::WHITE);
+        let result = lighting(m, light, p, eyev, normalv);
+        assert_relative_eq!(result, Colour::new(1.63638, 1.63638, 1.63638), epsilon=DEFAULT_EPSILON);
+    }
+    #[test]
+    fn lighting_behind_object() {
+        let m = Material::new();
+        let p = point(0.0, 0.0, 0.0);
+        let eyev = vector(0.0, 0.0, -1.0);
+        let normalv = vector(0.0, 0.0, -1.0);
+        let light = Light::new(point(0.0, 0.0, 10.0), colour::WHITE);
+        let result = lighting(m, light, p, eyev, normalv);
+        assert_eq!(result, Colour::new(0.1, 0.1, 0.1));
+    }
+    #[test]
+    fn prepare_comps() {
+        let r = Ray::new(point(0., 0., -5.), vector(0., 0., 1.));
+        let s = Sphere::new();
+        let i = Intersection::new(4., Shape::Sphere(s));
+        let comps = r.prepare_computations(&i);
+        assert_eq!(comps.t, i.t);
+        assert_eq!(comps.object, i.object);
+        assert_eq!(comps.point, point(0.0, 0.0, -1.0));
+        assert_eq!(comps.eyev, vector(0.0, 0.0, -1.0));
+        assert_eq!(comps.normalv, vector(0.0, 0.0, -1.0));
+    }
+    #[test]
+    fn prepare_compus_hit_from_outside() {
+        let r = Ray::new(point(0., 0., -5.), vector(0., 0., 1.));
+        let s = Sphere::new();
+        let i = Intersection::new(4., Shape::Sphere(s));
+        let comps = r.prepare_computations(&i);
+        assert!(!comps.inside);
+    }
+    #[test]
+    fn prepare_compus_hit_from_inside() {
+        let r = Ray::new(point(0., 0., 0.), vector(0., 0., 1.));
+        let s = Sphere::new();
+        let i = Intersection::new(1., Shape::Sphere(s));
+        let comps = r.prepare_computations(&i);
+        assert_eq!(comps.point, point(0.0, 0.0, 1.0));
+        assert_eq!(comps.eyev, vector(0.0, 0.0, -1.0));
+        assert_eq!(comps.normalv, vector(0.0, 0.0, -1.0));
+        assert!(comps.inside);
+    }
 }

@@ -13,24 +13,7 @@ impl Tuple {
     pub fn new(x: f32, y: f32, z: f32, w: f32) -> Tuple {
         Tuple { x, y, z, w }
     }
-    /// Create a new point tuple
-    pub fn point(x: f32, y: f32, z: f32) -> Tuple {
-        Tuple {
-            x,
-            y,
-            z,
-            w: 1.0,
-        }
-    }
-    /// Create a new vector tuple
-    pub fn vector(x: f32, y: f32, z: f32) -> Tuple {
-        Tuple {
-            x,
-            y,
-            z,
-            w: 0.0,
-        }
-    }
+
     /// Check if tuple is a point
     pub fn is_point(&self) -> bool {
         self.w == 1.0
@@ -73,6 +56,10 @@ impl Tuple {
             self.z * other.x - self.x * other.z,
             self.x * other.y - self.y * other.x,
         )
+    }
+    /// Reflect a vector around normal
+    pub fn reflect(self, normal: Tuple) -> Tuple {
+        self - normal*2.0*self.dot(normal)
     }
 }
 impl ops::Add for Tuple {
