@@ -1,4 +1,4 @@
-use crate::{colour::{self, Colour}, matrix::Matrix4x4, shapes::{self, Material, Shape}, tuple::{self, point, vector, Tuple}};
+use crate::{colour::{self, Colour}, matrix::Matrix4x4, shapes::{self, Material, Shape}, tuple::{self, point, vector, Tuple}, DEFAULT_EPSILON};
 use std::cmp::Ordering;
 
 /// A ray.
@@ -58,7 +58,8 @@ impl Ray {
             inside = false;
             normalv = normalv;
         }
-        Computations{t: inter.t, object: inter.object, point, normalv, eyev, inside}
+        let over_point = point + normalv * (DEFAULT_EPSILON*200.0); // TODO can  I reduce this factor and still stop the acne?
+        Computations{t: inter.t, object: inter.object, point, normalv, eyev, inside, over_point}
     }
 }
 pub struct Computations {
@@ -68,6 +69,7 @@ pub struct Computations {
     pub normalv: Tuple,
     pub eyev: Tuple,
     pub inside: bool,
+    pub over_point: Tuple,
 }
 /// An intersection between a ray and a shape.
 #[derive(Clone, Copy, Debug)]
@@ -132,14 +134,17 @@ impl Light {
         Light {position, intensity}
     }
 }
-pub fn lighting(material: Material, light: Light, point: Tuple, eyev: Tuple, normalv: Tuple) -> Colour{
+pub fn lighting(material: Material, light: Light, point: Tuple, eyev: Tuple, normalv: Tuple, in_shadow: bool) -> Colour{
     let effective_colour = material.colour * light.intensity;
     let ambient = effective_colour * material.ambient;
     let lightv = (light.position - point).normalize();
     let light_dot_normal = lightv.dot(normalv);     
     let diffuse;
     let specular;
-    if light_dot_normal < 0.0 {
+    if in_shadow {
+        specular = colour::BLACK;
+        diffuse = colour::BLACK;
+    }else if light_dot_normal < 0.0 {
         diffuse = colour::BLACK;
         specular = colour::BLACK;
     } else {
@@ -413,7 +418,7 @@ mod tests {
         let eyev = vector(0.0, 0.0, -1.0);
         let normalv = vector(0.0, 0.0, -1.0);
         let light = Light::new(point(0.0, 0.0, -10.0), colour::WHITE);
-        let result = lighting(m, light, p, eyev, normalv);
+        let result = lighting(m, light, p, eyev, normalv, false);
         assert_eq!(result, Colour::new(1.9, 1.9, 1.9));
     }
     #[test]
@@ -426,7 +431,7 @@ mod tests {
         let eyev = vector(0.0, 0.0, -1.0);
         let normalv = vector(0.0, 0.0, -1.0);
         let light = Light::new(point(0.0, 0.0, -10.0), colour::WHITE);
-        let result = lighting(m, light, p, eyev, normalv);
+        let result = lighting(m, light, p, eyev, normalv, false);
         assert_eq!(result, Colour::new(0.5, 0.5, 0.5));
     }
     #[test]
@@ -436,7 +441,7 @@ mod tests {
         let eyev = vector(0.0, f32::sqrt(2.0)/2.0, -f32::sqrt(2.0)/2.0);
         let normalv = vector(0.0, 0.0, -1.0);
         let light = Light::new(point(0.0, 0.0, -10.0), colour::WHITE);
-        let result = lighting(m, light, p, eyev, normalv);
+        let result = lighting(m, light, p, eyev, normalv, false);
         assert_eq!(result, Colour::new(1.0, 1.0, 1.0));
     }
     #[test]
@@ -446,7 +451,7 @@ mod tests {
         let eyev = vector(0.0, 0.0, -1.0);
         let normalv = vector(0.0, 0.0, -1.0);
         let light = Light::new(point(0.0, 10.0, -10.0), colour::WHITE);
-        let result = lighting(m, light, p, eyev, normalv);
+        let result = lighting(m, light, p, eyev, normalv, false);
         assert_relative_eq!(result, Colour::new(0.7364, 0.7364, 0.7364), epsilon=DEFAULT_EPSILON);
     }
     #[test]
@@ -456,7 +461,7 @@ mod tests {
         let eyev = vector(0.0, -f32::sqrt(2.0)/2.0, -f32::sqrt(2.0)/2.0);
         let normalv = vector(0.0, 0.0, -1.0);
         let light = Light::new(point(0.0, 10.0, -10.0), colour::WHITE);
-        let result = lighting(m, light, p, eyev, normalv);
+        let result = lighting(m, light, p, eyev, normalv, false);
         assert_relative_eq!(result, Colour::new(1.63638, 1.63638, 1.63638), epsilon=DEFAULT_EPSILON);
     }
     #[test]
@@ -466,7 +471,7 @@ mod tests {
         let eyev = vector(0.0, 0.0, -1.0);
         let normalv = vector(0.0, 0.0, -1.0);
         let light = Light::new(point(0.0, 0.0, 10.0), colour::WHITE);
-        let result = lighting(m, light, p, eyev, normalv);
+        let result = lighting(m, light, p, eyev, normalv, false);
         assert_eq!(result, Colour::new(0.1, 0.1, 0.1));
     }
     #[test]
@@ -499,5 +504,23 @@ mod tests {
         assert_eq!(comps.eyev, vector(0.0, 0.0, -1.0));
         assert_eq!(comps.normalv, vector(0.0, 0.0, -1.0));
         assert!(comps.inside);
+    }
+    #[test]
+    fn lighting_in_shadow() {
+        let eyev = vector(0.0, 0.0, -1.0);
+        let normalv= vector(0.0, 0.0, -1.0);
+        let l = Light::new(point(0.0, 0.0, -10.0), colour::WHITE);
+        let in_shadow = true;
+        let result = lighting(Material::new(), l, point(0.0, 0.0, 0.0), eyev, normalv, in_shadow);
+        assert_eq!(result, Colour::new(0.1, 0.1, 0.1));
+    }
+    #[test]
+    fn hit_offsets_point() {
+        let r = Ray::new(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
+        let mut s = Sphere::new();
+        s.transform = translation(0.0, 0.0, 1.0);
+        let i = Intersection::new(5.0, Shape::Sphere(s));
+        let comps = r.prepare_computations(&i);
+        assert!(comps.point.z > comps.over_point.z);
     }
 }

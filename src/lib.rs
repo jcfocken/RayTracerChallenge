@@ -11,7 +11,7 @@ pub mod run {
     use crate::colour::Colour;
     use crate::ray::{Intersections, Ray, Light, lighting};
     use crate::shapes::{self, Sphere, Shape};
-    use crate::transformation::{rot_y};
+    use crate::transformation::{rot_x, rot_y, scale, translation};
     use crate::tuple::{point, vector};
     use crate::world::{view_transform, Camera, World};
     use crate::{canvas, colour, projectile, tuple, transformation};
@@ -90,7 +90,7 @@ pub mod run {
                         let point = r.position(hit_inter.t);
                         let normal = s.normal_at(point);
                         let eye = -(r.direction);
-                        let colour  = lighting(s.material, light, point, eye, normal);
+                        let colour  = lighting(s.material, light, point, eye, normal, false);
                         canv.write_pixel(_x, _y, colour);
                     }
                 }
@@ -112,6 +112,47 @@ pub mod run {
         let image = world.render(cam);
         fs::write("renders/sphere_render.ppm", image.to_ppm()).expect("Error writing image to disk");
     }
+    pub fn run_scene_render() {        
+        let light = Light::new(point(-10.0, 10.0, -10.0), colour::WHITE);
+
+        let mut floor = Sphere::new();
+        floor.transform = scale(10.0, 0.01, 10.0);
+        floor.material.colour = Colour::new(1.0, 0.9, 0.9);
+        floor.material.specular = 0.0;
+
+        let mut l_wall = Sphere::new();
+        l_wall.transform = translation(0.0, 0.0, 5.0) * rot_y((-PI)/4.0) * rot_x(PI/2.0) * scale(10.0, 0.01, 10.0);
+
+        let mut r_wall = Sphere::new();
+        r_wall.transform = translation(0.0, 0.0, 5.0) * rot_y(PI/4.0) * rot_x(PI/2.0) * scale(10.0, 0.01, 10.0);
+
+        let mut middle = Sphere::new();
+        middle.transform = translation(-0.5, 1.0, 0.5);
+        middle.material.colour = Colour::new(0.1, 1.0, 0.5);
+        middle.material.diffuse = 0.7;
+        middle.material.specular = 0.3;
+
+        let mut right = Sphere::new();
+        right.transform = translation(1.5, 0.5, -0.5) * scale(0.5, 0.5, 0.5);
+        right.material.colour = Colour::new(0.5, 1.0, 0.1);
+        right.material.diffuse = 0.7;
+        right.material.specular = 0.3;
+
+        let mut left = Sphere::new();
+        left.transform = translation(-1.5, 0.33, -0.75) * scale(0.33, 0.33, 0.33);
+        left.material.colour = Colour::new(1.0, 0.8, 0.1);
+        left.material.diffuse = 0.7;
+        left.material.specular = 0.3;
+
+        let objects = vec![Shape::Sphere(floor), Shape::Sphere(l_wall), Shape::Sphere(r_wall), Shape::Sphere(middle), Shape::Sphere(right), Shape::Sphere(left)];
+        let world = World{ objects: objects, lights: vec![light],};
+        let mut cam = Camera::new(2000, 1000, PI/3.0);   
+        let from = point(0.0, 1.5, -5.0);
+        let to = point(0.0, 1.0, 0.0);
+        let up = vector(0.0, 1.0, 0.0);
+        cam.transform = view_transform(from, to, up);
+        let image = world.render(cam);
+        fs::write("renders/scene_render.ppm", image.to_ppm()).expect("Error writing image to disk");
+    }
 }
-#[cfg(test)]
 const DEFAULT_EPSILON: f32 = 0.00001; //TODO does this belong here?

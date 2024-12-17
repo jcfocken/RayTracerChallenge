@@ -38,8 +38,9 @@ impl World {
                 material = s.material;
             }
         }
+        let shadowed = self.is_shadowed(comps.over_point);
         // TODO check there are any lights, iter over all
-        lighting(material, self.lights[0], comps.point, comps.eyev, comps.normalv)
+        lighting(material, self.lights[0], comps.point, comps.eyev, comps.normalv, shadowed)
     }
     /// Intersect a ray with the world and find the shade if it hits
     pub fn colour_at(&self, ray: Ray) -> Colour {
@@ -62,6 +63,24 @@ impl World {
             }
         }
         image
+    }
+    /// Check if the point is shadowed by any object in the world
+    pub fn is_shadowed(&self, point: Tuple) -> bool {
+        // TODO do this for all lights
+        let v = self.lights[0].position - point;
+        let distance = v.magnitude();
+        let direction = v.normalize();
+        let r = Ray::new(point, direction);
+        let inters = self.intersect(&r);
+        if let Some(hit) = inters.hit() {
+            if hit.t < distance { // TODO can I add tis to the if let pattern?
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
     }
 }
 /// Create a view transformation matrix
@@ -125,7 +144,7 @@ mod tests {
     use std::{f32::consts::PI, vec};
     use approx::assert_relative_eq;
     use super::{World, view_transform};
-    use crate::{colour::{self, Colour}, matrix::{identity, Matrix4x4}, ray::{Intersection, Light, Ray}, shapes::{Shape, Sphere}, transformation::{rot_y, scale, translation}, tuple::{point, vector}, world::Camera, DEFAULT_EPSILON};
+    use crate::{colour::{self, Colour}, matrix::{identity, Matrix4x4}, ray::{self, Intersection, Light, Ray}, shapes::{Shape, Sphere}, transformation::{rot_y, scale, translation}, tuple::{point, vector}, world::Camera, DEFAULT_EPSILON};
     
     #[test]
     fn create_world() {
@@ -288,5 +307,46 @@ mod tests {
         cam.transform = view_transform(from, to, up);
         let image = world.render(cam);
         assert_relative_eq!(image.pixel_at(5, 5), Colour::new(0.38066, 0.47583, 0.2855), epsilon=DEFAULT_EPSILON);
+    }
+    #[test]
+    fn shadow_default_world() {
+        let world = World::default_world();
+        let p = point(0.0, 10.0, 0.0);
+        let is_shadowed = world.is_shadowed(p);
+        assert!(!is_shadowed);
+    }
+    #[test]
+    fn shadow_when_obj_between_point_and_light() {
+        let world = World::default_world();
+        let p = point(10.0, -10.0, 10.0);
+        let is_shadowed = world.is_shadowed(p);
+        assert!(is_shadowed);
+    }
+    #[test]
+    fn shadow_when_obj_behind_light() {
+        let world = World::default_world();
+        let p = point(-20.0, 20.0, -20.0);
+        let is_shadowed = world.is_shadowed(p);
+        assert!(!is_shadowed);
+    }
+    #[test]
+    fn shadow_when_obj_behind_point() {
+        let world = World::default_world();
+        let p = point(-2.0, 20.0, -2.0);
+        let is_shadowed = world.is_shadowed(p);
+        assert!(!is_shadowed);
+    }
+    #[test]
+    fn shade_hit_in_shadow() {
+        let light = Light::new(point(0.0,0.0, -10.0), colour::WHITE);
+        let s1 = Sphere::new();
+        let mut s2 = Sphere::new();
+        s2.set_transform(translation(0.0, 0.0, 10.0));        
+        let world = World{ objects: vec![Shape::Sphere(s1), Shape::Sphere(s2)], lights: vec![light],};
+        let r = Ray::new(point(0.0, 0.0, 5.0), vector(0.0, 0.0, 1.0));
+        let i = Intersection::new(4.0, Shape::Sphere(s2));
+        let comps = r.prepare_computations(&i);
+        let c = world.shade_hit(comps);
+        assert_eq!(c, Colour::new(0.1, 0.1, 0.1));
     }
 }
