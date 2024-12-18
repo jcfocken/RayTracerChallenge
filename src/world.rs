@@ -1,8 +1,6 @@
-use std::fs;
-
-use crate::{canvas::Canvas, colour::{self, Colour, BLACK, WHITE}, matrix::{identity, Matrix4x4}, ray::{self, lighting, Computations, Intersections, Light, Ray}, shapes::{self, Shape, Sphere}, transformation::{scale, translation}, tuple::{point, vector, Tuple}};
+use crate::{canvas::Canvas, colour::{self, Colour, BLACK}, matrix::{identity, Matrix4x4}, ray::{self, lighting, Computations, Intersections, Light, Ray}, shapes::Object, transformation::{scale, translation}, tuple::{point, Tuple}};
 pub struct World {
-    pub objects: Vec<shapes::Shape>,
+    pub objects: Vec<Object>,
     pub lights: Vec<ray::Light>,
 }
 
@@ -13,13 +11,13 @@ impl World {
     // TODO use the default function
     pub fn default_world() -> World {
         let light = Light::new(point(-10.0, 10.0, -10.0), colour::WHITE);
-        let mut s1 = Sphere::new();
+        let mut s1 = Object::new_sphere();
         s1.material.colour = Colour::new(0.8, 1.0, 0.6);
         s1.material.diffuse = 0.7;
         s1.material.specular = 0.2;
-        let mut s2 = Sphere::new();
+        let mut s2 = Object::new_sphere();
         s2.set_transform(scale(0.5, 0.5, 0.5));
-        World{ objects: vec![Shape::Sphere(s1), Shape::Sphere(s2)], lights: vec![light],}
+        World{ objects: vec![s1, s2], lights: vec![light],}
     }
     /// Find all the intersections of a ray and the objects in the world
     pub fn intersect(&self, ray: &Ray) -> Intersections {
@@ -32,15 +30,9 @@ impl World {
     }
     /// Calculate the shaded colour at a hit 
     pub fn shade_hit(&self, comps: Computations) -> Colour {
-        let material;        
-        match comps.object {
-            Shape::Sphere(s) => {
-                material = s.material;
-            }
-        }
         let shadowed = self.is_shadowed(comps.over_point);
         // TODO check there are any lights, iter over all
-        lighting(material, self.lights[0], comps.point, comps.eyev, comps.normalv, shadowed)
+        lighting(comps.object.material, self.lights[0], comps.point, comps.eyev, comps.normalv, shadowed)
     }
     /// Intersect a ray with the world and find the shade if it hits
     pub fn colour_at(&self, ray: Ray) -> Colour {
@@ -144,7 +136,7 @@ mod tests {
     use std::{f32::consts::PI, vec};
     use approx::assert_relative_eq;
     use super::{World, view_transform};
-    use crate::{colour::{self, Colour}, matrix::{identity, Matrix4x4}, ray::{self, Intersection, Light, Ray}, shapes::{Shape, Sphere}, transformation::{rot_y, scale, translation}, tuple::{point, vector}, world::Camera, DEFAULT_EPSILON};
+    use crate::{colour::{self, Colour}, matrix::{identity, Matrix4x4}, ray::{Intersection, Light, Ray}, shapes::Object, transformation::{rot_y, scale, translation}, tuple::{point, vector}, world::Camera, DEFAULT_EPSILON};
     
     #[test]
     fn create_world() {
@@ -156,15 +148,15 @@ mod tests {
     fn create_default_world() {
         let world = World::default_world();
         let light = Light::new(point(-10.0, 10.0, -10.0), colour::WHITE);
-        let mut s1 = Sphere::new();
+        let mut s1 = Object::new_sphere();
         s1.material.colour = Colour::new(0.8, 1.0, 0.6);
         s1.material.diffuse = 0.7;
         s1.material.specular = 0.2;
-        let mut s2 = Sphere::new();
+        let mut s2 = Object::new_sphere();
         s2.set_transform(scale(0.5, 0.5, 0.5));
         assert!(world.lights.contains(&light));
-        assert!(world.objects.contains(&Shape::Sphere(s1)));
-        assert!(world.objects.contains(&Shape::Sphere(s2)));
+        assert!(world.objects.contains(&s1));
+        assert!(world.objects.contains(&s2));
     }
     #[test]
     fn intersect_world() {
@@ -339,12 +331,12 @@ mod tests {
     #[test]
     fn shade_hit_in_shadow() {
         let light = Light::new(point(0.0,0.0, -10.0), colour::WHITE);
-        let s1 = Sphere::new();
-        let mut s2 = Sphere::new();
+        let s1 = Object::new_sphere();
+        let mut s2 = Object::new_sphere();
         s2.set_transform(translation(0.0, 0.0, 10.0));        
-        let world = World{ objects: vec![Shape::Sphere(s1), Shape::Sphere(s2)], lights: vec![light],};
+        let world = World{ objects: vec![s1, s2], lights: vec![light],};
         let r = Ray::new(point(0.0, 0.0, 5.0), vector(0.0, 0.0, 1.0));
-        let i = Intersection::new(4.0, Shape::Sphere(s2));
+        let i = Intersection::new(4.0, s2);
         let comps = r.prepare_computations(&i);
         let c = world.shade_hit(comps);
         assert_eq!(c, Colour::new(0.1, 0.1, 0.1));
