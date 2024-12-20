@@ -1,4 +1,4 @@
 use ray_tracing::run;
 fn main() {
-    run::run_scene_render();
+    run::run_planes_render();
 }

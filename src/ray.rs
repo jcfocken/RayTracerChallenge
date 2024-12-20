@@ -39,8 +39,9 @@ impl Ray {
             Shape::Plane() => {
                 if self.direction.y.abs() < DEFAULT_EPSILON {                    
                     vec![]
-                } else {                    
-                    vec![]
+                } else {     
+                    let t = (-transformed_ray.origin.y)/transformed_ray.direction.y;
+                    vec![Intersection::new(t, *object)]
                 }
             }
         }
@@ -63,7 +64,7 @@ impl Ray {
             inside = false;
             normalv = normalv;
         }
-        let over_point = point + normalv * (DEFAULT_EPSILON*200.0); // TODO can  I reduce this factor and still stop the acne?
+        let over_point = point + normalv * (DEFAULT_EPSILON*50.0); // TODO can  I reduce this factor and still stop the acne?
         Computations{t: inter.t, object: inter.object, point, normalv, eyev, inside, over_point}
     }
 }
@@ -544,11 +545,12 @@ mod tests {
     }
     #[test]
     fn intersect_plane_from_above() {
-        let p = Object::new_plane();
+        let mut p = Object::new_plane();
+        p.set_transform(translation(0.0, -1.0, 0.0));
         let r = Ray::new(point(0.0, 1.0, 0.0), vector(0.0, -1.0, 0.0));
         let xs = r.intersect(&p);
         assert_eq!(xs.len(), 1);
-        assert_eq!(xs[0].t, 1.0);
+        assert_eq!(xs[0].t, 2.0);
         assert_eq!(xs[0].object, p);
     }
     #[test]
