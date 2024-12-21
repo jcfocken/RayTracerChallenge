@@ -32,6 +32,11 @@ pub const BLUE: Colour = Colour {
     green: 0.0,
     blue: 1.0,
 };
+pub const YELLOW: Colour = Colour {
+    red: 1.0,
+    green: 1.0,
+    blue: 0.0,
+};
 
 impl Colour {
     /// Create a new colour struct
@@ -41,20 +46,20 @@ impl Colour {
     /// Return RGB values as a tuple normalized from 0 to max
     pub fn normalize(&self, max: usize) -> (usize, usize, usize) {
         let red: usize = match self.red {
-                            x if x < 0.0 =>  0,
-                            x if x > 1.0 =>  max,
-                            x => (x * max as f32).round() as usize,
+            x if x < 0.0 => 0,
+            x if x > 1.0 => max,
+            x => (x * max as f32).round() as usize,
         };
         let green: usize = match self.green {
-                            x if x < 0.0 => 0,
-                            x if x > 1.0 => max,
-                            x => (x * max as f32).round() as usize,
+            x if x < 0.0 => 0,
+            x if x > 1.0 => max,
+            x => (x * max as f32).round() as usize,
         };
         let blue: usize = match self.blue {
-                            x if x < 0.0 => 0,
-                            x if x > 1.0 => max,
-                            x => (x * max as f32).round() as usize,
-        };     
+            x if x < 0.0 => 0,
+            x if x > 1.0 => max,
+            x => (x * max as f32).round() as usize,
+        };
         (red, green, blue)
     }
 }
@@ -112,25 +117,29 @@ impl approx::AbsDiffEq for Colour {
         f32::default_epsilon()
     }
     fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
-        f32::abs_diff_eq(&self.red, &other.red, epsilon) &&
-        f32::abs_diff_eq(&self.green, &other.green, epsilon) &&
-        f32::abs_diff_eq(&self.blue, &other.blue, epsilon)
+        f32::abs_diff_eq(&self.red, &other.red, epsilon)
+            && f32::abs_diff_eq(&self.green, &other.green, epsilon)
+            && f32::abs_diff_eq(&self.blue, &other.blue, epsilon)
     }
 
     fn abs_diff_ne(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
         !Self::abs_diff_eq(self, other, epsilon)
     }
 }
-impl approx::RelativeEq for Colour{
+impl approx::RelativeEq for Colour {
     fn default_max_relative() -> Self::Epsilon {
         f32::default_max_relative()
     }
 
-    fn relative_eq(&self, other: &Self, epsilon: Self::Epsilon, max_relative: Self::Epsilon)
-            -> bool {
-        f32::relative_eq(&self.red, &other.red, epsilon, max_relative) &&
-        f32::relative_eq(&self.green, &other.green, epsilon, max_relative) &&
-        f32::relative_eq(&self.blue, &other.blue, epsilon, max_relative)        
+    fn relative_eq(
+        &self,
+        other: &Self,
+        epsilon: Self::Epsilon,
+        max_relative: Self::Epsilon,
+    ) -> bool {
+        f32::relative_eq(&self.red, &other.red, epsilon, max_relative)
+            && f32::relative_eq(&self.green, &other.green, epsilon, max_relative)
+            && f32::relative_eq(&self.blue, &other.blue, epsilon, max_relative)
     }
 }
 
@@ -167,7 +176,7 @@ mod tests {
             green: 0.7,
             blue: 1.0,
         };
-        assert_relative_eq!(c1+c2, c3)
+        assert_relative_eq!(c1 + c2, c3)
     }
     #[test]
     fn subtract_colour() {
@@ -186,7 +195,7 @@ mod tests {
             green: 0.5,
             blue: 0.5,
         };
-        assert_relative_eq!(c1-c2, c3)
+        assert_relative_eq!(c1 - c2, c3)
     }
     #[test]
     fn scale_colour() {
@@ -200,7 +209,7 @@ mod tests {
             green: 0.6,
             blue: 0.8,
         };
-        assert_relative_eq!(c1*2.0, c2)
+        assert_relative_eq!(c1 * 2.0, c2)
     }
     #[test]
     fn mix_colour() {
@@ -219,6 +228,6 @@ mod tests {
             green: 0.2,
             blue: 0.04,
         };
-        assert_relative_eq!(c1*c2, c3)
+        assert_relative_eq!(c1 * c2, c3)
     }
 }
