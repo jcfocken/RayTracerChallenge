@@ -61,7 +61,7 @@ impl Ray {
         let d = m * self.direction;
         Ray::new(p, d)
     }
-    pub fn prepare_computations(self, inter: &Intersection) -> Computations {
+    pub fn prepare_computations(self, inter: &Intersection, inters: Intersections) -> Computations {
         let point = self.position(inter.t);
         let eyev = -(self.direction);
         let inside;
@@ -74,7 +74,35 @@ impl Ray {
             normalv = normalv;
         }
         let over_point = point + normalv * (DEFAULT_EPSILON); // TODO can  I reduce this factor and still stop the acne?
+        let under_point = point - normalv * (DEFAULT_EPSILON); // TODO can  I reduce this factor and still stop the acne?
         let reflectv = self.direction.reflect(normalv);
+        let mut n1 = 1.0;
+        let mut n2 = 1.0;
+        let mut containers: Vec<Object> = Vec::new();
+        for x in inters.inters {
+            if x == *inter {
+                if let Some(o) = containers.last() {                    
+                    n1 = o.material.refractive_index;
+                } else {
+                    n1 = 1.0;
+                }
+            }
+            if let Some(index) = containers.iter().position(|value| *value == x.object) {
+                //remove object from container if it already exists as we're exiting the object
+                containers.remove(index);
+            } else {
+                //add object to container if it doesn't exist as we're entering the object
+                containers.push(x.object);
+            }
+            if x == *inter {
+                if let Some(o) = containers.last() {                    
+                    n2 = o.material.refractive_index;
+                } else {
+                    n2 = 1.0;
+                }
+                break;                
+            }
+        }
         Computations {
             t: inter.t,
             object: inter.object,
@@ -83,7 +111,10 @@ impl Ray {
             eyev,
             inside,
             over_point,
+            under_point,
             reflectv,
+            n1,
+            n2
         }
     }
 }
@@ -95,7 +126,10 @@ pub struct Computations {
     pub eyev: Tuple,
     pub inside: bool,
     pub over_point: Tuple,
+    pub under_point: Tuple,
     pub reflectv: Tuple,
+    pub n1: f32,
+    pub n2: f32,
 }
 /// An intersection between a ray and a shape.
 #[derive(Clone, Copy, Debug)]
@@ -551,7 +585,7 @@ mod tests {
         let r = Ray::new(point(0., 0., -5.), vector(0., 0., 1.));
         let s = Object::new_sphere();
         let i = Intersection::new(4., s);
-        let comps = r.prepare_computations(&i);
+        let comps = r.prepare_computations(&i, Intersections::new(vec![i]));
         assert_eq!(comps.t, i.t);
         assert_eq!(comps.object, i.object);
         assert_eq!(comps.point, point(0.0, 0.0, -1.0));
@@ -563,7 +597,7 @@ mod tests {
         let r = Ray::new(point(0., 0., -5.), vector(0., 0., 1.));
         let s = Object::new_sphere();
         let i = Intersection::new(4., s);
-        let comps = r.prepare_computations(&i);
+        let comps = r.prepare_computations(&i, Intersections::new(vec![i]));
         assert!(!comps.inside);
     }
     #[test]
@@ -571,7 +605,7 @@ mod tests {
         let r = Ray::new(point(0., 0., 0.), vector(0., 0., 1.));
         let s = Object::new_sphere();
         let i = Intersection::new(1., s);
-        let comps = r.prepare_computations(&i);
+        let comps = r.prepare_computations(&i, Intersections::new(vec![i]));
         assert_eq!(comps.point, point(0.0, 0.0, 1.0));
         assert_eq!(comps.eyev, vector(0.0, 0.0, -1.0));
         assert_eq!(comps.normalv, vector(0.0, 0.0, -1.0));
@@ -599,7 +633,7 @@ mod tests {
         let mut s = Object::new_sphere();
         s.transform = translation(0.0, 0.0, 1.0);
         let i = Intersection::new(5.0, s);
-        let comps = r.prepare_computations(&i);
+        let comps = r.prepare_computations(&i, Intersections::new(vec![i]));
         assert!(comps.point.z > comps.over_point.z);
     }
     #[test]
@@ -657,7 +691,48 @@ mod tests {
         let object = Object::new_plane();
         let r = Ray::new(point(0.0, 1.0, -1.0), vector(0.0, -(f32::sqrt(2.0)/2.0), f32::sqrt(2.0)/2.0));
         let i = Intersection::new(f32::sqrt(2.0), object);
-        let comps = r.prepare_computations(&i);
+        let comps = r.prepare_computations(&i, Intersections::new(vec![i]));
         assert_eq!(comps.reflectv, vector(0.0, f32::sqrt(2.0)/2.0, f32::sqrt(2.0)/2.0));
+    }
+    fn find_n1_n2_setup(index: usize) -> (f32, f32) {
+        let mut a = Object::glass_sphere();
+        a.transform = scale(2.0, 2.0, 2.0);
+        a.material.refractive_index = 1.5;
+        let mut b = Object::glass_sphere();
+        b.transform = translation(0.0, 0.0, -0.25);
+        b.material.refractive_index = 2.0;
+        let mut c = Object::glass_sphere();
+        c.transform = translation(0.0, 0.0, 0.25);
+        c.material.refractive_index = 2.5;
+        let r = Ray::new(point(0.0, 0.0, -4.0), vector(0.0, 0.0, 1.0));
+        let xs = Intersections::new(vec![Intersection::new(2.0, a),
+                                                                Intersection::new(2.75, b),
+                                                                Intersection::new(3.25, c),
+                                                                Intersection::new(4.75, b),
+                                                                Intersection::new(5.25, c),
+                                                                Intersection::new(6.0, a)]);
+        let comps = r.prepare_computations(&xs.inters[index].clone(), xs); //TODO check if this is the right way to borrow
+        (comps.n1, comps.n2)
+    }
+    #[test]
+    fn find_n1_n2_0() {        
+        assert_eq!(find_n1_n2_setup(0), (1.0, 1.5));
+        assert_eq!(find_n1_n2_setup(1), (1.5, 2.0));
+        assert_eq!(find_n1_n2_setup(2), (2.0, 2.5));
+        assert_eq!(find_n1_n2_setup(3), (2.5, 2.5));
+        assert_eq!(find_n1_n2_setup(4), (2.5, 1.5));
+        assert_eq!(find_n1_n2_setup(5), (1.5, 1.0));
+    }
+    #[test]
+    fn compute_under_point() {        
+        let r = Ray::new(point(0.0, 0.0, -5.0), vector(0.0, 0.0, 1.0));
+        let mut s = Object::glass_sphere();
+        s.transform = translation(0.0, 0.0, 1.0); 
+        let i = Intersection::new(5.0, s);
+        let xs = Intersections::new(vec![i]);
+        let comps= r.prepare_computations(&i, xs);
+        println!("underpoint z {}", comps.under_point.z);
+        assert!(comps.under_point.z > DEFAULT_EPSILON/2.0);
+        assert!(comps.point.z < comps.under_point.z);
     }
 }

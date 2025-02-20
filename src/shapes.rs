@@ -34,6 +34,17 @@ impl Object {
             shape: Shape::Sphere(),
         }
     }
+    /// Create a glass sphere
+    pub fn glass_sphere() -> Object {
+        let mut m = Material::new();
+        m.transparency = 1.0;
+        m.refractive_index = 1.5;
+        Object {
+            transform: matrix::identity(),
+            material: m,
+            shape: Shape::Sphere(),
+        }
+    }
     /// Create a new plane
     pub fn new_plane() -> Object {
         Object {
@@ -81,6 +92,8 @@ pub struct Material {
     pub shininess: f32,
     pub pattern: Option<Pattern>,
     pub reflective: f32,
+    pub transparency: f32,
+    pub refractive_index: f32,
 }
 impl Material {
     /// Create a new default material
@@ -93,11 +106,14 @@ impl Material {
             shininess: 200.0,
             pattern: None,
             reflective: 0.0,
+            transparency: 0.0,
+            refractive_index: 1.0,
         }
     }
 }
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum PatternType {
+    Test(),
     Striped(),
     Gradient(),
     Ring(),
@@ -111,6 +127,14 @@ pub struct Pattern {
     pub transformation: Matrix4x4,
 }
 impl Pattern {
+    pub fn new_test() -> Pattern {
+        Pattern {
+            c1: colour::BLACK,
+            c2: colour::WHITE,
+            pattern_type: PatternType::Test(),
+            transformation: identity(),
+        }
+    }
     pub fn new_striped(c1: colour::Colour, c2: colour::Colour) -> Pattern {
         Pattern {
             c1,
@@ -145,6 +169,9 @@ impl Pattern {
     }
     pub fn pattern_at(&self, point: Tuple) -> Colour {
         match self.pattern_type {
+            PatternType::Test() => {
+                Colour::new(point.x, point.y, point.z)
+            }
             PatternType::Striped() => {
                 if (point.x.floor().rem_euclid(2.0)) > 0.0 {
                     self.c2
@@ -183,12 +210,7 @@ mod tests {
     use approx::assert_relative_eq;
 
     use crate::{
-        colour::{Colour, BLACK, WHITE},
-        matrix::identity,
-        shapes::{Material, Object, Pattern},
-        transformation::{scale, translation},
-        tuple::{point, vector},
-        DEFAULT_EPSILON,
+        colour::{Colour, BLACK, WHITE}, matrix::identity, shapes::{Material, Object, Pattern}, transformation::{scale, translation}, tuple::{point, vector}, DEFAULT_EPSILON
     };
 
     #[test]
@@ -360,5 +382,25 @@ mod tests {
     fn default_reflectivity() {
         let m = Material::new();
         assert_eq!(m.reflective, 0.0);
+    }
+    #[test]
+    fn material_has_transparency_refractivity() {
+        let m = Material::new();
+        assert_eq!(m.transparency, 0.0);
+        assert_eq!(m.refractive_index, 1.0);
+    }
+    #[test]
+    fn create_glass_sphere() {
+        let s = Object::glass_sphere();
+        assert_eq!(s.transform, identity());
+        assert_eq!(s.material.transparency, 1.0);
+        assert_eq!(s.material.refractive_index, 1.5);
+    }
+    #[test]
+    fn test_patter_object_trans() {
+        let mut s = Object::new_sphere();
+        s.transform = scale(2.0, 2.0, 2.0);
+        s.material.pattern = Some(Pattern::new_test());
+        assert_eq!(s.pattern_at(point(2.0, 3.0, 4.0)), Colour::new(1.0, 1.5, 2.0));
     }
 }

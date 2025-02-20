@@ -293,13 +293,13 @@ pub mod run {
         r_wall.transform = translation(0.0, 0.0, 5.0) * rot_y(PI / 4.0) * rot_x(PI / 2.0);
         r_wall.material.pattern = Some(Pattern::new_ring(WHITE, GREEN));
 
-        let mut middle = Object::new_sphere();
+        let mut middle = Object::glass_sphere();
         middle.transform = translation(-0.5, 1.0, 0.5);
-        let mut p = Pattern::new_striped(WHITE, RED);
+        //let mut p = Pattern::new_striped(WHITE, RED);
         p.transformation = translation(0.6, 0.0, 0.0) * scale(0.5, 0.5, 0.5);
-        middle.material.pattern = Some(p);
-        middle.material.diffuse = 0.7;
-        middle.material.specular = 0.3;
+        middle.material.ambient = 0.0;
+        middle.material.diffuse = 0.0;
+        middle.material.specular = 0.1;
 
         let mut right = Object::new_sphere();
         right.transform = translation(1.5, 0.5, -0.5) * scale(0.5, 0.5, 0.5);
