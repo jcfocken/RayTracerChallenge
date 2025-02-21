@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 approx = "0.5.1"
+chrono = "0.4.39"
 
 [dev-dependencies]
 criterion = { version = "0.4", features = ["html_reports"] }
@@ -17,4 +18,4 @@ name = "my_benchmark"
 harness = false
 
 [profile.release]
-debug = true
+debug = false

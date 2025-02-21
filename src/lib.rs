@@ -295,11 +295,15 @@ pub mod run {
 
         let mut middle = Object::glass_sphere();
         middle.transform = translation(-0.5, 1.0, 0.5);
-        //let mut p = Pattern::new_striped(WHITE, RED);
         p.transformation = translation(0.6, 0.0, 0.0) * scale(0.5, 0.5, 0.5);
-        middle.material.ambient = 0.0;
-        middle.material.diffuse = 0.0;
-        middle.material.specular = 0.1;
+        middle.material.ambient = 0.05;
+        middle.material.diffuse = 0.1;
+        middle.material.specular = 1.0;
+        middle.material.shininess = 300.0;
+        middle.material.reflective = 0.5;
+        middle.material.transparency = 0.9;
+        middle.material.refractive_index = 1.0;
+        //middle.material.colour = Colour::new(0.1, 0.1, 0.1);
 
         let mut right = Object::new_sphere();
         right.transform = translation(1.5, 0.5, -0.5) * scale(0.5, 0.5, 0.5);
@@ -335,7 +339,8 @@ pub mod run {
         let up = vector(0.0, 1.0, 0.0);
         cam.transform = view_transform(from, to, up);
         let image = world.render(cam);
-        fs::write("renders/scene_render.ppm", image.to_ppm()).expect("Error writing image to disk");
+        let time_stamp = chrono::offset::Local::now().format("%Y-%m-%d_%H-%M-%S").to_string();
+        fs::write(format!("renders/scene_render_{}.ppm", time_stamp), image.to_ppm()).expect("Error writing image to disk");
     }
 }
 const DEFAULT_EPSILON: f32 = 0.00001; //TODO does this belong here?

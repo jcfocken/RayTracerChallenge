@@ -132,7 +132,7 @@ pub struct Computations {
     pub n2: f32,
 }
 /// Computes the reflectance value using the Schlick function
-fn schlick(comps: Computations) -> f32 {
+pub fn schlick(comps: Computations) -> f32 {
     let mut cos = comps.eyev.dot(comps.normalv);
     if comps.n1 > comps.n2 {
         let n = comps.n1 / comps.n2;
@@ -144,8 +144,7 @@ fn schlick(comps: Computations) -> f32 {
         cos = cos_t;
     }
     let r0 = f32::powi((comps.n1 - comps.n2)/(comps.n1 + comps.n2), 2);
-    println!("n1 =  {}, n2 = {}, r0 = {}", comps.n1, comps.n2, r0);
-    r0 + (1.0 - r0) * f32::powi(1.0 - cos, 2)
+    r0 + (1.0 - r0) * f32::powi(1.0 - cos, 5)
 } 
 /// An intersection between a ray and a shape.
 #[derive(Clone, Copy, Debug)]
@@ -774,6 +773,6 @@ mod tests {
         let s = Object::glass_sphere();
         let xs = Intersections::new(vec![Intersection::new(1.8589, s)]);
         let comps= r.prepare_computations(&xs.inters[0].clone(), xs);
-        assert_eq!(schlick(comps), 0.48873);
+        assert_relative_eq!(schlick(comps), 0.4887307);
     }
 }
