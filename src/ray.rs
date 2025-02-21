@@ -131,6 +131,22 @@ pub struct Computations {
     pub n1: f32,
     pub n2: f32,
 }
+/// Computes the reflectance value using the Schlick function
+fn schlick(comps: Computations) -> f32 {
+    let mut cos = comps.eyev.dot(comps.normalv);
+    if comps.n1 > comps.n2 {
+        let n = comps.n1 / comps.n2;
+        let sin2_t = f32::powi(n, 2) * (1.0 - f32::powi(cos, 2));
+        if sin2_t > 1.0 {
+            return 1.0
+        }
+        let cos_t = f32::sqrt(1.0 - sin2_t);
+        cos = cos_t;
+    }
+    let r0 = f32::powi((comps.n1 - comps.n2)/(comps.n1 + comps.n2), 2);
+    println!("n1 =  {}, n2 = {}, r0 = {}", comps.n1, comps.n2, r0);
+    r0 + (1.0 - r0) * f32::powi(1.0 - cos, 2)
+} 
 /// An intersection between a ray and a shape.
 #[derive(Clone, Copy, Debug)]
 pub struct Intersection {
@@ -238,7 +254,7 @@ mod tests {
     use crate::{
         colour::{self, Colour, BLACK, WHITE},
         matrix,
-        ray::{lighting, Intersections, Light, Ray},
+        ray::{lighting, schlick, Intersections, Light, Ray},
         shapes::{Material, Object, Pattern},
         transformation::{rot_z, scale, translation},
         tuple::{point, vector},
@@ -731,8 +747,33 @@ mod tests {
         let i = Intersection::new(5.0, s);
         let xs = Intersections::new(vec![i]);
         let comps= r.prepare_computations(&i, xs);
-        println!("underpoint z {}", comps.under_point.z);
         assert!(comps.under_point.z > DEFAULT_EPSILON/2.0);
         assert!(comps.point.z < comps.under_point.z);
+    }
+    #[test]
+    fn compute_schlick() {        
+        let r = Ray::new(point(0.0, 0.0, f32::sqrt(2.0)/2.0), vector(0.0, 1.0, 0.0));
+        let s = Object::glass_sphere();
+        let xs = Intersections::new(vec![Intersection::new(-f32::sqrt(2.0)/2.0, s),
+                                                                Intersection::new(f32::sqrt(2.0)/2.0, s)]);
+        let comps= r.prepare_computations(&xs.inters[1].clone(), xs);
+        assert_eq!(schlick(comps), 1.0);
+    }
+    #[test]
+    fn compute_schlick_perpendicular() {        
+        let r = Ray::new(point(0.0, 0.0, 0.0)  , vector(0.0, 1.0, 0.0));
+        let s = Object::glass_sphere();
+        let xs = Intersections::new(vec![Intersection::new(-1.0, s),
+                                                                Intersection::new(1.0, s)]);
+        let comps= r.prepare_computations(&xs.inters[1].clone(), xs);
+        assert_relative_eq!(schlick(comps), 0.04);
+    }
+    #[test]
+    fn compute_schlick_small_angle() {        
+        let r = Ray::new(point(0.0, 0.99, -2.0)  , vector(0.0, 0.0, 1.0));
+        let s = Object::glass_sphere();
+        let xs = Intersections::new(vec![Intersection::new(1.8589, s)]);
+        let comps= r.prepare_computations(&xs.inters[0].clone(), xs);
+        assert_eq!(schlick(comps), 0.48873);
     }
 }

@@ -456,7 +456,7 @@ mod tests {
         assert_eq!(world.refracted_colour(comps, 0), BLACK);
     }
     #[test]
-    fn total_internal_refraction() {
+    fn total_internal_reflection() {
         let world = World::default_world();
         let mut shape = world.objects[0];
         shape.material.transparency = 1.0;
